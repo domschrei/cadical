@@ -16,14 +16,14 @@ void Internal::learn_empty_clause () {
   assert (!unsat);
   LOG ("learned empty clause");
   external->check_learned_empty_clause ();
-  if (proof) proof->add_derived_empty_clause ();
+  if (proof) proof->add_derived_empty_clause (++stats.added.total);
   unsat = true;
 }
 
 void Internal::learn_unit_clause (int lit) {
   LOG ("learned unit clause %d", lit);
   external->check_learned_unit_clause (lit);
-  if (proof) proof->add_derived_unit_clause (lit);
+  if (proof) proof->add_derived_unit_clause (++stats.added.total, lit);
   mark_fixed (lit);
 }
 
@@ -343,6 +343,36 @@ struct analyze_trail_larger {
 
 /*------------------------------------------------------------------------*/
 
+// Fill the 'chain' variable with the LRAT style unit propagation proof of
+// newly learnt clause
+
+static vector<signed char> justified;
+
+void Internal::justify_lit (int lit) {
+  Flags & f = flags (lit);
+  if (f.justified) return;
+  Clause* c = var (lit).reason;
+  if (c) {
+    for (const_literal_iterator i = c->begin (); i != c->end (); i++) {
+      int other = *i;
+      if (other == lit) continue;
+      justify_lit (-other);
+    }
+    chain.push_back (c->id);
+  }
+  f.justified = true;
+}
+
+void Internal::build_chain () {
+  chain.clear ();
+  for (Flags& f : ftab) f.justified = false;
+  for (const_literal_iterator i = conflict->begin (); i != conflict->end (); i++)
+    justify_lit (-*i);
+  chain.push_back (conflict->id);
+}
+
+/*------------------------------------------------------------------------*/
+
 // Generate new driving clause and compute jump level.
 
 Clause * Internal::new_driving_clause (const int glue, int & jump) {
@@ -364,6 +394,8 @@ Clause * Internal::new_driving_clause (const int glue, int & jump) {
   } else {
 
     assert (clause.size () > 1);
+
+    build_chain ();
 
     // We have to get the last assigned literals into the watch position.
     // Sorting all literals with respect to reverse assignment order is

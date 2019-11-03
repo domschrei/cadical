@@ -124,13 +124,14 @@ int External::internalize (int elit) {
 void External::add (int elit) {
   assert (elit != INT_MIN);
   reset_extended ();
+  int64_t id = original.size();
   if (internal->opts.check &&
       (internal->opts.checkwitness || internal->opts.checkfailed))
     original.push_back (elit);
   const int ilit = internalize (elit);
   assert (!elit == !ilit);
   if (elit) LOG ("adding external %d as internal %d", elit, ilit);
-  internal->add_original_lit (ilit);
+  internal->add_original_lit (id, ilit);
 }
 
 void External::assume (int elit) {
@@ -301,7 +302,7 @@ void External::check_assignment (int (External::*a)(int) const) {
 void External::check_assumptions_satisfied () {
   for (const auto & lit : assumptions) {
     // Not 'signed char' !!!!
-    const int tmp = ival (lit);				
+    const int tmp = ival (lit);
     if (tmp < 0) FATAL ("assumption %d falsified", lit);
     if (!tmp) FATAL ("assumption %d unassigned", lit);
   }

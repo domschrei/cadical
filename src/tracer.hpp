@@ -10,17 +10,18 @@ namespace CaDiCaL {
 class Tracer : public Observer {
   Internal * internal;
   File * file;
-  bool binary;
+  bool binary, lrat;
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
+  void put_binary_clause_id (int64_t clause);
   int64_t added, deleted;
 public:
 
-  Tracer (Internal *, File * file, bool binary); // own and delete 'file'
+  Tracer (Internal *, File * file, bool binary, bool lrat); // own and delete 'file'
   ~Tracer ();
 
-  void add_derived_clause (const vector<int> &);
-  void delete_clause (const vector<int> &);
+  void add_derived_clause (int64_t, const vector<int64_t> &, const vector<int> &);
+  void delete_clause (int64_t, const vector<int> &);
   bool closed ();
   void close ();
   void flush ();

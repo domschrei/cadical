@@ -190,6 +190,7 @@ void Internal::elim_on_the_fly_self_subsumption (Eliminator & eliminator,
     if (tmp < 0) continue;
     clause.push_back (lit);
   }
+  chain.clear (); // TODO(Mario)
   Clause * r = new_resolved_irredundant_clause ();
   elim_update_added_clause (eliminator, r);
   clause.clear ();
@@ -449,6 +450,7 @@ Internal::elim_add_resolvents (Eliminator & eliminator, int pivot) {
       if (substitute && c->gate == d->gate) continue;
       if (!resolve_clauses (eliminator, c, pivot, d)) continue;
       assert (clause.size () <= (size_t) opts.elimclslim);
+      chain.clear (); // TODO(Mario)
       Clause * r = new_resolved_irredundant_clause ();
       elim_update_added_clause (eliminator, r);
       eliminator.enqueue (r);

@@ -23,9 +23,7 @@ typedef const int * const_literal_iterator;
 // is very costly.
 
 struct Clause {
-#ifdef LOGGING
   int64_t id;         // Only useful for debugging.
-#endif
 
   bool conditioned:1; // Tried for globally blocked clause elimination.
   bool covered:1;     // Already considered for covered clause elimination.

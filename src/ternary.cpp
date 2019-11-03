@@ -151,6 +151,7 @@ void Internal::ternary_lit (int pivot, int64_t & steps, int64_t & htrs) {
       if (hyper_ternary_resolve (c, pivot, d)) {
         size_t size = clause.size ();
         bool red = (size == 3 || (c->redundant && d->redundant));
+        chain.clear (); // TODO(Mario)
         Clause * r = new_hyper_ternary_resolved_clause (red);
         if (red) r->hyper = true;
         clause.clear ();

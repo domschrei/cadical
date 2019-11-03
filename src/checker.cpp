@@ -474,7 +474,7 @@ void Checker::add_original_clause (const vector<int> & c) {
   STOP (checking);
 }
 
-void Checker::add_derived_clause (const vector<int> & c) {
+void Checker::add_derived_clause (const vector<int64_t> &, const vector<int> & c) {
   if (inconsistent) return;
   START (checking);
   LOG (c, "CHECKER addition of derived clause");

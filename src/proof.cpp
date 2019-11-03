@@ -20,7 +20,7 @@ void Internal::new_proof_on_demand () {
 void Internal::trace (File * file) {
   assert (!tracer);
   new_proof_on_demand ();
-  tracer = new Tracer (this, file, opts.binary);
+  tracer = new Tracer (this, file, opts.binary, opts.lrat);
   LOG ("PROOF connecting proof tracer");
   proof->connect (tracer);
 }
@@ -74,23 +74,23 @@ inline void Proof::add_literals (const vector<int> & c) {
 
 /*------------------------------------------------------------------------*/
 
-void Proof::add_original_clause (const vector<int> & c) {
+void Proof::add_original_clause (int64_t id, const vector<int> & c) {
   LOG (c, "PROOF adding original internal clause");
   add_literals (c);
-  add_original_clause ();
+  add_original_clause (id);
 }
 
-void Proof::add_derived_empty_clause () {
+void Proof::add_derived_empty_clause (int64_t id) {
   LOG ("PROOF adding empty clause");
   assert (clause.empty ());
-  add_derived_clause ();
+  add_derived_clause (id);
 }
 
-void Proof::add_derived_unit_clause (int internal_unit) {
+void Proof::add_derived_unit_clause (int64_t id, int internal_unit) {
   LOG ("PROOF adding unit clause %d", internal_unit);
   assert (clause.empty ());
   add_literal (internal_unit);
-  add_derived_clause ();
+  add_derived_clause (id);
 }
 
 /*------------------------------------------------------------------------*/
@@ -99,29 +99,29 @@ void Proof::add_derived_clause (Clause * c) {
   LOG (c, "PROOF adding to proof derived");
   assert (clause.empty ());
   add_literals (c);
-  add_derived_clause ();
+  add_derived_clause (c->id);
 }
 
 void Proof::delete_clause (Clause * c) {
   LOG (c, "PROOF deleting from proof");
   assert (clause.empty ());
   add_literals (c);
-  delete_clause ();
+  delete_clause (c->id);
 }
 
-void Proof::delete_clause (const vector<int> & c) {
+void Proof::delete_clause (int64_t id, const vector<int> & c) {
   LOG (c, "PROOF deleting from proof");
   assert (clause.empty ());
   add_literals (c);
-  delete_clause ();
+  delete_clause (id);
 }
 
-void Proof::add_derived_clause (const vector<int> & c) {
+void Proof::add_derived_clause (int64_t id, const vector<int> & c) {
   LOG (internal->clause, "PROOF adding derived clause");
   assert (clause.empty ());
   for (const auto & lit : c)
     add_literal (lit);
-  add_derived_clause ();
+  add_derived_clause (id);
 }
 
 /*------------------------------------------------------------------------*/
@@ -138,7 +138,7 @@ void Proof::flush_clause (Clause * c) {
     if (internal->fixed (internal_lit) < 0) continue;
     add_literal (internal_lit);
   }
-  add_derived_clause ();
+  add_derived_clause (c->id);
   delete_clause (c);
 }
 
@@ -156,30 +156,30 @@ void Proof::strengthen_clause (Clause * c, int remove) {
     if (internal_lit == remove) continue;
     add_literal (internal_lit);
   }
-  add_derived_clause ();
+  add_derived_clause (c->id);
   delete_clause (c);
 }
 
 /*------------------------------------------------------------------------*/
 
-void Proof::add_original_clause () {
+void Proof::add_original_clause (int64_t id) {
   LOG (clause, "PROOF adding original external clause");
   for (size_t i = 0; i < observers.size (); i++)
-    observers[i]->add_original_clause (clause);
+    observers[i]->add_original_clause (id, clause);
   clause.clear ();
 }
 
-void Proof::add_derived_clause () {
+void Proof::add_derived_clause (int64_t id) {
   LOG (clause, "PROOF adding derived external clause");
   for (size_t i = 0; i < observers.size (); i++)
-    observers[i]->add_derived_clause (clause);
+    observers[i]->add_derived_clause (id, internal->chain, clause);
   clause.clear ();
 }
 
-void Proof::delete_clause () {
+void Proof::delete_clause (int64_t id) {
   LOG (clause, "PROOF deleting external clause");
   for (size_t i = 0; i < observers.size (); i++)
-    observers[i]->delete_clause (clause);
+    observers[i]->delete_clause (id, clause);
   clause.clear ();
 }
 

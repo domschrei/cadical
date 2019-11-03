@@ -87,9 +87,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   Clause * c = (Clause *) new char[bytes];
 
   stats.added.total++;
-#ifdef LOGGING
   c->id = stats.added.total;
-#endif
 
   c->conditioned = false;
   c->covered = false;
@@ -307,7 +305,7 @@ void Internal::assign_original_unit (int lit) {
 
 // New clause added through the API, e.g., while parsing a DIMACS file.
 //
-void Internal::add_new_original_clause () {
+void Internal::add_new_original_clause (int64_t id) {
   if (level) backtrack ();
   LOG (original, "original clause");
   bool skip = false;
@@ -341,9 +339,10 @@ void Internal::add_new_original_clause () {
       unmark (lit);
   }
   if (skip) {
-    if (proof) proof->delete_clause (original);
+    if (proof) proof->delete_clause (id, original);
   } else {
     size_t size = clause.size ();
+    int64_t id = 0;
     if (!size) {
       if (!unsat) {
         if (!original.size ()) MSG ("found empty original clause");
@@ -355,12 +354,15 @@ void Internal::add_new_original_clause () {
     } else {
       Clause * c = new_clause (false);
       watch_clause (c);
+      id = c->id;
     }
     if (original.size () > size) {
       external->check_learned_clause ();
       if (proof) {
-        proof->add_derived_clause (clause);
-        proof->delete_clause (original);
+        if (!id) id = ++stats.added.total;
+        chain.clear (); // TODO(Mario)
+        proof->add_derived_clause (id, clause);
+        proof->delete_clause (id, original);
       }
     }
   }

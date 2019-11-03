@@ -162,13 +162,13 @@ void Internal::init (int new_max_var) {
   LOG ("finished initializing %d internal variables", initialized);
 }
 
-void Internal::add_original_lit (int lit) {
+void Internal::add_original_lit (int64_t id, int lit) {
   assert (abs (lit) <= max_var);
   if (lit) {
     original.push_back (lit);
   } else {
-    if (proof) proof->add_original_clause (original);
-    add_new_original_clause ();
+    if (proof) proof->add_original_clause (id, original);
+    add_new_original_clause (id);
     original.clear ();
   }
 }

@@ -133,6 +133,7 @@ inline int Internal::hyper_binary_resolve (Clause * reason) {
     assert (clause.empty ());
     clause.push_back (-dom);
     clause.push_back (lits[0]);
+    chain.clear (); // TODO(Mario)
     Clause * c = new_hyper_binary_resolved_clause (red, 2);
     if (red) c->hyper = true;
     clause.clear ();

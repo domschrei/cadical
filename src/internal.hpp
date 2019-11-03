@@ -180,6 +180,7 @@ struct Internal {
   vector<int> analyzed;         // analyzed literals in 'analyze'
   vector<int> minimized;        // removable or poison in 'minimize'
   vector<int> probes;           // remaining scheduled probes
+  vector<int64_t> chain;        // clause IDs for derivation chain
   vector<Level> control;        // 'level + 1 == control.size ()'
   vector<Clause*> clauses;      // ordered collection of all clauses
   Averages averages;            // glue, size, jump moving averages
@@ -220,7 +221,7 @@ struct Internal {
   void init_queue (int old_max_var, int new_max_var);
   void init_scores (int old_max_var, int new_max_var);
 
-  void add_original_lit (int lit);
+  void add_original_lit (int64_t id, int lit);
 
   // Enlarge tables.
   //
@@ -470,7 +471,7 @@ struct Internal {
   void delete_clause (Clause *);
   void mark_garbage (Clause *);
   void assign_original_unit (int);
-  void add_new_original_clause ();
+  void add_new_original_clause (int64_t);
   Clause * new_learned_redundant_clause (int glue);
   Clause * new_hyper_binary_resolved_clause (bool red, int glue);
   Clause * new_clause_as (const Clause * orig);
@@ -515,6 +516,8 @@ struct Internal {
   Clause * new_driving_clause (const int glue, int & jump);
   int find_conflict_level (int & forced);
   int determine_actual_backtrack_level (int jump);
+  void justify_lit (int lit);
+  void build_chain ();
   void analyze ();
   void iterate ();       // report learned unit clause
 

@@ -153,7 +153,7 @@ public:
   // The following three implement the 'Observer' interface.
   //
   void add_original_clause (const vector<int> &);
-  void add_derived_clause (const vector<int> &);
+  void add_derived_clause (const vector<int64_t> &, const vector<int> &);
   void delete_clause (const vector<int> &);
 
   void print_stats ();

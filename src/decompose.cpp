@@ -261,6 +261,7 @@ bool Internal::decompose_round () {
       LOG ("need new clause since at least one watched literal changed");
       if (clause.size () == 2) new_binary_clause = true;
       size_t d_clause_idx = clauses.size ();
+      chain.clear (); // TODO(Mario)
       Clause * d = new_clause_as (c);
       assert (clauses[d_clause_idx] == d);
       clauses[d_clause_idx] = c;
@@ -271,13 +272,16 @@ bool Internal::decompose_round () {
       LOG ("simply shrinking clause since watches did not change");
       assert (c->size > 2);
       if (!c->redundant) mark_removed (c);
+      int64_t id = ++stats.added.total;
       if (proof) {
-        proof->add_derived_clause (clause);
+        chain.clear (); // TODO(Mario)
+        proof->add_derived_clause (id, clause);
         proof->delete_clause (c);
       }
       size_t l;
       for (l = 2; l < clause.size (); l++)
         c->literals[l] = clause[l];
+      c->id = id;
       int flushed = c->size - (int) l;
       if (flushed) {
         if (l == 2) new_binary_clause = true;

@@ -11,6 +11,7 @@ struct Flags {        // Variable flags.
   bool keep      : 1; // keep in learned clause in 'minimize'
   bool poison    : 1; // can not be removed in 'minimize'
   bool removable : 1; // can be removed in 'minimize'
+  bool justified : 1; // visited by 'justify_lit'
 
   // These three variable flags are used to schedule clauses in subsumption
   // ('subsume'), variables in bounded variable elimination ('elim') and in
@@ -44,7 +45,7 @@ struct Flags {        // Variable flags.
   // Initialized explicitly in 'Internal::init' through this function.
   //
   Flags () {
-    seen = keep = poison = removable = false;
+    seen = keep = poison = removable = justified = false;
     subsume = elim = ternary = true;
     block = 3u;
     skip = assumed = failed = 0;
