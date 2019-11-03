@@ -21,6 +21,7 @@ public:
 
   Random (uint64_t seed) : state (seed) { }
   Random (const Random & other) : state (other.seed ()) { }
+  Random & operator=(const Random &) = default;
 
   void operator += (uint64_t a) { add (a); }
   uint64_t seed () const { return state; }
