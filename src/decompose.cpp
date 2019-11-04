@@ -115,7 +115,9 @@ bool Internal::decompose_round () {
                 other = scc[--j];
                 if (other == -parent) {
                   LOG ("both %d and %d in one SCC", parent, -parent);
+                  LOG ("PROOF missing chain (SCC 1)"); // TODO(Mario)
                   assign_unit (parent);
+                  LOG ("PROOF missing chain (SCC 2)"); // TODO(Mario)
                   learn_empty_clause ();
                 } else {
                   if (abs (other) < abs (repr)) repr = other;
@@ -249,9 +251,11 @@ bool Internal::decompose_round () {
       garbage++;
     } else if (!clause.size ()) {
       LOG ("learned empty clause during decompose");
+      LOG ("PROOF missing chain (decompose empty)"); // TODO(Mario)
       learn_empty_clause ();
     } else if (clause.size () == 1) {
       LOG (c, "unit %d after substitution", clause[0]);
+      LOG ("PROOF missing chain (decompose unit)"); // TODO(Mario)
       assign_unit (clause[0]);
       mark_garbage (c);
       new_unit = true;
@@ -261,7 +265,7 @@ bool Internal::decompose_round () {
       LOG ("need new clause since at least one watched literal changed");
       if (clause.size () == 2) new_binary_clause = true;
       size_t d_clause_idx = clauses.size ();
-      chain.clear (); // TODO(Mario)
+      LOG ("PROOF missing chain (decompose new)"); // TODO(Mario)
       Clause * d = new_clause_as (c);
       assert (clauses[d_clause_idx] == d);
       clauses[d_clause_idx] = c;
@@ -272,9 +276,9 @@ bool Internal::decompose_round () {
       LOG ("simply shrinking clause since watches did not change");
       assert (c->size > 2);
       if (!c->redundant) mark_removed (c);
-      int64_t id = ++stats.added.total;
+      int64_t id = ++clause_id;
       if (proof) {
-        chain.clear (); // TODO(Mario)
+        LOG ("PROOF missing chain (decompose shrink)"); // TODO(Mario)
         proof->add_derived_clause (id, clause);
         proof->delete_clause (c);
       }
@@ -318,6 +322,7 @@ bool Internal::decompose_round () {
 
   if (!unsat && propagated < trail.size () && !propagate ()) {
     LOG ("empty clause after propagating units from substitution");
+    build_chain ();
     learn_empty_clause ();
   }
 

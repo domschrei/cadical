@@ -68,7 +68,7 @@ void Internal::mark_added (Clause * c) {
 
 /*------------------------------------------------------------------------*/
 
-Clause * Internal::new_clause (bool red, int glue) {
+Clause * Internal::new_clause (int64_t id, bool red, int glue) {
 
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();
@@ -87,7 +87,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   Clause * c = (Clause *) new char[bytes];
 
   stats.added.total++;
-  c->id = stats.added.total;
+  c->id = id ? id : ++clause_id;
 
   c->conditioned = false;
   c->covered = false;
@@ -342,7 +342,7 @@ void Internal::add_new_original_clause (int64_t id) {
     if (proof) proof->delete_clause (id, original);
   } else {
     size_t size = clause.size ();
-    int64_t id = 0;
+    int64_t cid = original.size () > size ? ++clause_id : id;
     if (!size) {
       if (!unsat) {
         if (!original.size ()) MSG ("found empty original clause");
@@ -352,16 +352,14 @@ void Internal::add_new_original_clause (int64_t id) {
     } else if (size == 1) {
       assign_original_unit (clause[0]);
     } else {
-      Clause * c = new_clause (false);
+      Clause * c = new_clause (cid, false);
       watch_clause (c);
-      id = c->id;
     }
     if (original.size () > size) {
       external->check_learned_clause ();
       if (proof) {
-        if (!id) id = ++stats.added.total;
-        chain.clear (); // TODO(Mario)
-        proof->add_derived_clause (id, clause);
+        LOG ("PROOF missing chain (minified original clause)"); // TODO(Mario)
+        proof->add_derived_clause (cid, clause);
         proof->delete_clause (id, original);
       }
     }
@@ -381,7 +379,7 @@ Clause * Internal::new_learned_redundant_clause (int glue) {
     assert (var (clause[1]).level >= var (clause[i]).level);
 #endif
   external->check_learned_clause ();
-  Clause * res = new_clause (true, glue);
+  Clause * res = new_clause (0, true, glue);
   if (proof) proof->add_derived_clause (res);
   assert (watching ());
   watch_clause (res);
@@ -392,7 +390,7 @@ Clause * Internal::new_learned_redundant_clause (int glue) {
 //
 Clause * Internal::new_hyper_binary_resolved_clause (bool red, int glue) {
   external->check_learned_clause ();
-  Clause * res = new_clause (red, glue);
+  Clause * res = new_clause (0, red, glue);
   if (proof) proof->add_derived_clause (res);
   assert (watching ());
   watch_clause (res);
@@ -404,7 +402,7 @@ Clause * Internal::new_hyper_binary_resolved_clause (bool red, int glue) {
 Clause * Internal::new_hyper_ternary_resolved_clause (bool red) {
   external->check_learned_clause ();
   size_t size = clause.size ();
-  Clause * res = new_clause (red, size);
+  Clause * res = new_clause (0, red, size);
   if (proof) proof->add_derived_clause (res);
   assert (!watching ());
   return res;
@@ -416,7 +414,7 @@ Clause * Internal::new_hyper_ternary_resolved_clause (bool red) {
 Clause * Internal::new_clause_as (const Clause * orig) {
   external->check_learned_clause ();
   const int new_glue = orig->glue;
-  Clause * res = new_clause (orig->redundant, new_glue);
+  Clause * res = new_clause (0, orig->redundant, new_glue);
   assert (!orig->redundant || !orig->keep || res->keep);
   if (proof) proof->add_derived_clause (res);
   assert (watching ());
@@ -429,7 +427,7 @@ Clause * Internal::new_clause_as (const Clause * orig) {
 //
 Clause * Internal::new_resolved_irredundant_clause () {
   external->check_learned_clause ();
-  Clause * res = new_clause (false);
+  Clause * res = new_clause (0, false);
   if (proof) proof->add_derived_clause (res);
   assert (!watching ());
   return res;

@@ -63,7 +63,11 @@ inline void Internal::search_assign (int lit, Clause * reason) {
   else if (reason == decision_reason) lit_level = level, reason = 0;
   else if (opts.chrono) lit_level = assignment_level (lit, reason);
   else lit_level = level;
-  if (!lit_level) reason = 0;
+  if (!lit_level) {
+    if (chain.empty() && reason && reason != decision_reason)
+      chain.push_back(reason->id);
+    reason = 0;
+  }
 
   v.level = lit_level;
   v.trail = (int) trail.size ();

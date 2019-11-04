@@ -65,20 +65,20 @@ void Tracer::add_derived_clause (int64_t id, const vector<int64_t> & chain, cons
   if (binary) file->put ('a');
   if (lrat) {
     if (binary) put_binary_clause_id (id);
-    else file->put (id), file->put (' ');
+    else file->put (id), file->put ("  ");
   }
   for (const auto & external_lit : clause)
     if (binary) put_binary_lit (external_lit);
     else file->put (external_lit), file->put (' ');
-  if (binary) put_binary_zero ();
-  else file->put ("0\n");
   if (lrat) {
+    if (binary) put_binary_zero ();
+    else file->put ("0  ");
     for (const auto & c : chain)
       if (binary) put_binary_clause_id (c);
       else file->put (c), file->put (' ');
-    if (binary) put_binary_zero ();
-    else file->put ("0\n");
   }
+  if (binary) put_binary_zero ();
+  else file->put ("0\n");
   added++;
 }
 

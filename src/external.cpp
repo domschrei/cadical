@@ -124,14 +124,13 @@ int External::internalize (int elit) {
 void External::add (int elit) {
   assert (elit != INT_MIN);
   reset_extended ();
-  int64_t id = original.size();
   if (internal->opts.check &&
       (internal->opts.checkwitness || internal->opts.checkfailed))
     original.push_back (elit);
   const int ilit = internalize (elit);
   assert (!elit == !ilit);
   if (elit) LOG ("adding external %d as internal %d", elit, ilit);
-  internal->add_original_lit (id, ilit);
+  internal->add_original_lit (ilit);
 }
 
 void External::assume (int elit) {

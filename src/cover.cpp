@@ -570,6 +570,7 @@ bool Internal::cover () {
     if (!propagate ()) {
       LOG ("propagating units before covered clause elimination "
         "results in empty clause");
+      build_chain ();
       learn_empty_clause ();
       assert (unsat);
     }

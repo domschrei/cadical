@@ -75,19 +75,19 @@ inline void Proof::add_literals (const vector<int> & c) {
 /*------------------------------------------------------------------------*/
 
 void Proof::add_original_clause (int64_t id, const vector<int> & c) {
-  LOG (c, "PROOF adding original internal clause");
+  LOG (c, "PROOF adding original internal clause [%ld]", id);
   add_literals (c);
   add_original_clause (id);
 }
 
 void Proof::add_derived_empty_clause (int64_t id) {
-  LOG ("PROOF adding empty clause");
+  LOG ("PROOF adding empty clause [%ld]", id);
   assert (clause.empty ());
   add_derived_clause (id);
 }
 
 void Proof::add_derived_unit_clause (int64_t id, int internal_unit) {
-  LOG ("PROOF adding unit clause %d", internal_unit);
+  LOG ("PROOF adding unit clause [%ld] %d", id, internal_unit);
   assert (clause.empty ());
   add_literal (internal_unit);
   add_derived_clause (id);
@@ -117,7 +117,7 @@ void Proof::delete_clause (int64_t id, const vector<int> & c) {
 }
 
 void Proof::add_derived_clause (int64_t id, const vector<int> & c) {
-  LOG (internal->clause, "PROOF adding derived clause");
+  LOG (internal->clause, "PROOF adding derived clause [%ld]", id);
   assert (clause.empty ());
   for (const auto & lit : c)
     add_literal (lit);
@@ -173,6 +173,7 @@ void Proof::add_derived_clause (int64_t id) {
   LOG (clause, "PROOF adding derived external clause");
   for (size_t i = 0; i < observers.size (); i++)
     observers[i]->add_derived_clause (id, internal->chain, clause);
+  internal->chain.clear ();
   clause.clear ();
 }
 

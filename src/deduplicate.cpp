@@ -93,6 +93,17 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
           LOG ("found %d %d and %d %d which produces unit %d",
             lit, -other, lit, other, lit);
           unit = lit;
+          assert(chain.empty());
+          chain.push_back(c->id);
+          // We've forgotten where the other binary clause is, so go find it again
+          for (watch_iterator k = ws.begin ();;k++) {
+            assert (k != i);
+            if (!k->binary ()) continue;
+            if (k->blit != other) continue;
+            chain.push_back(k->clause->id);
+            break;
+          }
+
           j = ws.begin ();              // Flush 'ws'.
           units++;
 
@@ -125,6 +136,7 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
 
       if (!propagate ()) {
         LOG ("empty clause after propagating unit");
+        build_chain ();
         learn_empty_clause ();
       }
     }

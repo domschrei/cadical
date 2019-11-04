@@ -679,6 +679,7 @@ bool Internal::block () {
     connect_watches ();
     if (!propagate ()) {
       LOG ("propagating units results in empty clause");
+      build_chain ();
       learn_empty_clause ();
       assert (unsat);
     }

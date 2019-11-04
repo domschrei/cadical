@@ -145,6 +145,7 @@ struct Internal {
   size_t vsize;                 // actually allocated variable data size
   int max_var;                  // internal maximum variable index
   int level;                    // decision level ('control.size () - 1')
+  int64_t clause_id;            // last assigned clause ID
   signed char * vals;           // assignment [-max_var,max_var]
   vector<signed char> marks;    // signed marks [1,max_var]
   Phases phases;                // saved, target and best phases
@@ -221,7 +222,7 @@ struct Internal {
   void init_queue (int old_max_var, int new_max_var);
   void init_scores (int old_max_var, int new_max_var);
 
-  void add_original_lit (int64_t id, int lit);
+  void add_original_lit (int lit);
 
   // Enlarge tables.
   //
@@ -464,7 +465,7 @@ struct Internal {
   // Managing clauses in 'clause.cpp'.  Without explicit 'Clause' argument
   // these functions work on the global temporary 'clause'.
   //
-  Clause * new_clause (bool red, int glue = 0);
+  Clause * new_clause (int64_t id, bool red, int glue = 0);
   void promote_clause (Clause *, int new_glue);
   size_t shrink_clause (Clause *, int new_size);
   void deallocate_clause (Clause *);

@@ -53,10 +53,10 @@ void External::restore_clause (
   LOG (begin, end, "restoring external clause");
   for (auto p = begin; p != end; p++) {
     int ilit = internalize (*p);
-    internal->add_original_lit (0, ilit);
+    internal->add_original_lit (ilit);
     internal->stats.restoredlits++;
   }
-  internal->add_original_lit (0, 0);
+  internal->add_original_lit (0);
   internal->stats.restored++;
 }
 

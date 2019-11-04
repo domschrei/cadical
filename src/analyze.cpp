@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include <sstream>
 
 namespace CaDiCaL {
 
@@ -16,14 +17,14 @@ void Internal::learn_empty_clause () {
   assert (!unsat);
   LOG ("learned empty clause");
   external->check_learned_empty_clause ();
-  if (proof) proof->add_derived_empty_clause (++stats.added.total);
+  if (proof) proof->add_derived_empty_clause (++clause_id);
   unsat = true;
 }
 
 void Internal::learn_unit_clause (int lit) {
   LOG ("learned unit clause %d", lit);
   external->check_learned_unit_clause (lit);
-  if (proof) proof->add_derived_unit_clause (++stats.added.total, lit);
+  if (proof) proof->add_derived_unit_clause (++clause_id, lit);
   mark_fixed (lit);
 }
 
@@ -364,11 +365,17 @@ void Internal::justify_lit (int lit) {
 }
 
 void Internal::build_chain () {
-  chain.clear ();
+  assert (conflict), assert (chain.empty());
   for (Flags& f : ftab) f.justified = false;
   for (const_literal_iterator i = conflict->begin (); i != conflict->end (); i++)
     justify_lit (-*i);
   chain.push_back (conflict->id);
+
+#ifdef LOGGING
+  ostringstream ss;
+  for (auto c : chain) ss << " " << c;
+  LOG ("PROOF built chain%s", ss.str().c_str());
+#endif
 }
 
 /*------------------------------------------------------------------------*/
@@ -394,8 +401,6 @@ Clause * Internal::new_driving_clause (const int glue, int & jump) {
   } else {
 
     assert (clause.size () > 1);
-
-    build_chain ();
 
     // We have to get the last assigned literals into the watch position.
     // Sorting all literals with respect to reverse assignment order is
@@ -658,6 +663,7 @@ void Internal::analyze () {
       backtrack (conflict_level - 1);
 
       LOG ("forcing %d", forced);
+      LOG ("PROOF missing chain (forced)"); // TODO(Mario)
       search_assign_driving (forced, conflict);
 
       conflict = 0;
@@ -681,6 +687,7 @@ void Internal::analyze () {
   // Actual conflict on root level, thus formula unsatisfiable.
   //
   if (!level) {
+    build_chain ();
     learn_empty_clause ();
     STOP (analyze);
     return;
@@ -748,6 +755,9 @@ void Internal::analyze () {
     if (opts.minimize) minimize_clause ();
     size = (int) clause.size ();
   }
+
+  // Build the chain proof for the conflict.
+  build_chain ();
 
   // Update actual size statistics.
   //

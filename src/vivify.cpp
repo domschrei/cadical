@@ -55,7 +55,10 @@ inline void Internal::vivify_assign (int lit, Clause * reason) {
   v.level = level;                      // required to reuse decisions
   v.trail = (int) trail.size ();        // used in 'vivify_better_watch'
   v.reason = level ? reason : 0;        // for conflict analysis
-  if (!level) learn_unit_clause (lit);
+  if (!level) {
+    LOG ("PROOF missing chain (vivify assign)"); // TODO(Mario)
+    learn_unit_clause (lit);
+  }
   const signed char tmp = sign (lit);
   vals[idx] = tmp;
   vals[-idx] = -tmp;
