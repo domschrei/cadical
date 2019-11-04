@@ -102,6 +102,14 @@ void Proof::add_derived_clause (Clause * c) {
   add_derived_clause (c->id);
 }
 
+void Proof::add_derived_clause (int64_t id, const vector<int> & c) {
+  LOG (internal->clause, "PROOF adding derived clause [%ld]", id);
+  assert (clause.empty ());
+  for (const auto & lit : c)
+    add_literal (lit);
+  add_derived_clause (id);
+}
+
 void Proof::delete_clause (Clause * c) {
   LOG (c, "PROOF deleting from proof");
   assert (clause.empty ());
@@ -110,18 +118,26 @@ void Proof::delete_clause (Clause * c) {
 }
 
 void Proof::delete_clause (int64_t id, const vector<int> & c) {
-  LOG (c, "PROOF deleting from proof");
+  LOG (c, "PROOF deleting from proof [%ld]", id);
   assert (clause.empty ());
   add_literals (c);
   delete_clause (id);
 }
 
-void Proof::add_derived_clause (int64_t id, const vector<int> & c) {
-  LOG (internal->clause, "PROOF adding derived clause [%ld]", id);
+void Proof::finalize_clause (Clause * c) {
+  if (!internal->opts.lrat) return;
+  LOG (c, "PROOF finalizing");
   assert (clause.empty ());
-  for (const auto & lit : c)
-    add_literal (lit);
-  add_derived_clause (id);
+  add_literals (c);
+  finalize_clause (c->id);
+}
+
+void Proof::finalize_clause (int64_t id, const vector<int> & c) {
+  if (!internal->opts.lrat) return;
+  LOG (c, "PROOF finalizing [%ld]", id);
+  assert (clause.empty ());
+  add_literals (c);
+  finalize_clause (id);
 }
 
 /*------------------------------------------------------------------------*/
@@ -181,6 +197,14 @@ void Proof::delete_clause (int64_t id) {
   LOG (clause, "PROOF deleting external clause");
   for (size_t i = 0; i < observers.size (); i++)
     observers[i]->delete_clause (id, clause);
+  clause.clear ();
+}
+
+void Proof::finalize_clause (int64_t id) {
+  if (!internal->opts.lrat) return;
+  LOG (clause, "PROOF finalizing external clause");
+  for (size_t i = 0; i < observers.size (); i++)
+    observers[i]->finalize_clause (id, clause);
   clause.clear ();
 }
 

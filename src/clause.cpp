@@ -284,7 +284,7 @@ void Internal::mark_garbage (Clause * c) {
 // Almost the same function as 'search_assign' except that we do not pretend
 // to learn a new unit clause (which was confusing in log files).
 
-void Internal::assign_original_unit (int lit) {
+void Internal::assign_original_unit (int64_t id, int lit) {
   assert (!level);
   const int idx = vidx (lit);
   assert (!vals[idx]);
@@ -293,6 +293,7 @@ void Internal::assign_original_unit (int lit) {
   v.level = level;
   v.trail = (int) trail.size ();
   v.reason = 0;
+  v.unit_id = id;
   const signed char tmp = sign (lit);
   vals[idx] = tmp;
   vals[-idx] = -tmp;
@@ -350,7 +351,7 @@ void Internal::add_new_original_clause (int64_t id) {
         unsat = true;
       }
     } else if (size == 1) {
-      assign_original_unit (clause[0]);
+      assign_original_unit (cid, clause[0]);
     } else {
       Clause * c = new_clause (cid, false);
       watch_clause (c);

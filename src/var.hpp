@@ -21,6 +21,9 @@ struct Var {
     int parent;      // implication graph parent during probing
 
   };
+
+  // ID of the unit clause corresponding to this variable
+  int64_t unit_id;
 };
 
 }

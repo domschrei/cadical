@@ -22,6 +22,7 @@ public:
 
   void add_derived_clause (int64_t, const vector<int64_t> &, const vector<int> &);
   void delete_clause (int64_t, const vector<int> &);
+  void finalize_clause (int64_t, const vector<int> &);
   bool closed ();
   void close ();
   void flush ();

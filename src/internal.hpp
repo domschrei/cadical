@@ -471,7 +471,7 @@ struct Internal {
   void deallocate_clause (Clause *);
   void delete_clause (Clause *);
   void mark_garbage (Clause *);
-  void assign_original_unit (int);
+  void assign_original_unit (int64_t, int);
   void add_new_original_clause (int64_t);
   Clause * new_learned_redundant_clause (int glue);
   Clause * new_hyper_binary_resolved_clause (bool red, int glue);
@@ -963,6 +963,8 @@ struct Internal {
   int cdcl_loop_with_inprocessing ();
   //
   int solve ();         // Orchestrates the three functions above.
+
+  void finalize ();
 
 #ifndef QUIET
   // Built in profiling in 'profile.cpp' (see also 'profile.hpp').

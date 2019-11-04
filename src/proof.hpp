@@ -29,6 +29,7 @@ class Proof {
   void add_original_clause (int64_t); // notify observers of original clauses
   void add_derived_clause (int64_t);  // notify observers of derived clauses
   void delete_clause (int64_t);       // notify observers of deleted clauses
+  void finalize_clause (int64_t);     // notify observers of active clauses
 
 public:
 
@@ -50,6 +51,11 @@ public:
 
   void delete_clause (int64_t, const vector<int> &);
   void delete_clause (Clause *);
+
+  // notify observers of active clauses (deletion after empty clause)
+  //
+  void finalize_clause (int64_t, const vector<int> &);
+  void finalize_clause (Clause *);
 
   // These two actually pretend to add and remove a clause.
   //

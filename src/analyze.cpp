@@ -17,14 +17,22 @@ void Internal::learn_empty_clause () {
   assert (!unsat);
   LOG ("learned empty clause");
   external->check_learned_empty_clause ();
-  if (proof) proof->add_derived_empty_clause (++clause_id);
+  if (proof) {
+    int64_t id = ++clause_id;
+    proof->add_derived_empty_clause (id);
+    proof->finalize_clause (id, clause);
+  }
   unsat = true;
 }
 
 void Internal::learn_unit_clause (int lit) {
   LOG ("learned unit clause %d", lit);
   external->check_learned_unit_clause (lit);
-  if (proof) proof->add_derived_unit_clause (++clause_id, lit);
+  if (proof) {
+    int64_t id = ++clause_id;
+    var (lit).unit_id = id;
+    proof->add_derived_unit_clause (id, lit);
+  }
   mark_fixed (lit);
 }
 

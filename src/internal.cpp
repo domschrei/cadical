@@ -607,6 +607,18 @@ int Internal::solve () {
 
 /*------------------------------------------------------------------------*/
 
+void Internal::finalize () {
+  if (!proof || !opts.lrat) return;
+  for (int idx = 1; idx <= max_var; idx++) {
+    int64_t id = var (idx).unit_id;
+    if (!id) continue;
+    proof->finalize_clause(id, {idx * val (idx)});
+  }
+  for (const auto & c : clauses)
+    if (!c->garbage) proof->finalize_clause(c);
+}
+/*------------------------------------------------------------------------*/
+
 void Internal::print_stats () {
   stats.print (this);
   if (checker) checker->print_stats ();

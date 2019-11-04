@@ -25,6 +25,10 @@ public:
   //
   virtual void delete_clause (int64_t, const vector<int> &) { }
 
+  // Notify the observer that a clause is active at the end of processing.
+  //
+  virtual void finalize_clause (int64_t, const vector<int> &) { }
+
   virtual void flush () { }
 };
 

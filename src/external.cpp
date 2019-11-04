@@ -213,6 +213,7 @@ int External::solve () {
   update_molten_literals ();
   int res = internal->solve ();
   if (res == 10) extend ();
+  else if (res == 20) internal->finalize ();
   check_solve_result (res);
   reset_limits ();
   return res;
