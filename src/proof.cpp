@@ -187,8 +187,9 @@ void Proof::add_original_clause (int64_t id) {
 
 void Proof::add_derived_clause (int64_t id) {
   LOG (clause, "PROOF adding derived external clause");
+  vector<int64_t> * chain = internal->chain.empty() ? 0 : &internal->chain;
   for (size_t i = 0; i < observers.size (); i++)
-    observers[i]->add_derived_clause (id, internal->chain, clause);
+    observers[i]->add_derived_clause (id, chain, clause);
   internal->chain.clear ();
   clause.clear ();
 }

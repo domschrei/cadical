@@ -19,7 +19,7 @@ public:
 
   // Notify the observer that a new clause has been derived.
   //
-  virtual void add_derived_clause (int64_t, const vector<int64_t> &, const vector<int> &) { }
+  virtual void add_derived_clause (int64_t, const vector<int64_t> *, const vector<int> &) { }
 
   // Notify the observer that a clause is not used anymore.
   //

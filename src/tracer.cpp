@@ -59,7 +59,24 @@ inline void Tracer::put_binary_clause_id (int64_t c) {
 
 /*------------------------------------------------------------------------*/
 
-void Tracer::add_derived_clause (int64_t id, const vector<int64_t> & chain, const vector<int> & clause) {
+void Tracer::add_original_clause (int64_t id, const vector<int> & clause) {
+  if (!lrat) return;
+  if (file->closed ()) return;
+  LOG ("TRACER tracing addition of original clause");
+  if (binary) file->put ('o');
+  else if (lrat) file->put ("o ");
+  if (lrat) {
+    if (binary) put_binary_clause_id (id);
+    else file->put (id), file->put ("  ");
+  }
+  for (const auto & external_lit : clause)
+    if (binary) put_binary_lit (external_lit);
+    else file->put (external_lit), file->put (' ');
+  if (binary) put_binary_zero ();
+  else file->put ("0\n");
+}
+
+void Tracer::add_derived_clause (int64_t id, const vector<int64_t> * chain, const vector<int> & clause) {
   if (file->closed ()) return;
   LOG ("TRACER tracing addition of derived clause");
   if (binary) file->put ('a');
@@ -71,10 +88,10 @@ void Tracer::add_derived_clause (int64_t id, const vector<int64_t> & chain, cons
   for (const auto & external_lit : clause)
     if (binary) put_binary_lit (external_lit);
     else file->put (external_lit), file->put (' ');
-  if (lrat) {
-    if (binary) put_binary_zero ();
-    else file->put ("0  ");
-    for (const auto & c : chain)
+  if (lrat && chain) {
+    if (binary) put_binary_zero (), file->put ('l');
+    else file->put ("0  l ");
+    for (const auto & c : *chain)
       if (binary) put_binary_clause_id (c);
       else file->put (c), file->put (' ');
   }
@@ -102,8 +119,8 @@ void Tracer::delete_clause (int64_t id, const vector<int> & clause) {
 }
 
 void Tracer::finalize_clause (int64_t id, const vector<int> & clause) {
-  if (file->closed ()) return;
   if (!lrat) return;
+  if (file->closed ()) return;
   LOG ("TRACER tracing finalized clause");
   if (binary) file->put ('f');
   else file->put ("f ");

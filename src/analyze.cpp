@@ -360,19 +360,25 @@ static vector<signed char> justified;
 void Internal::justify_lit (int lit) {
   Flags & f = flags (lit);
   if (f.justified) return;
-  Clause* c = var (lit).reason;
-  if (c) {
-    for (const_literal_iterator i = c->begin (); i != c->end (); i++) {
-      int other = *i;
-      if (other == lit) continue;
-      justify_lit (-other);
+  Var & v = var (lit);
+  if (v.unit_id) {
+    chain.push_back (v.unit_id);
+  } else {
+    Clause* c = v.reason;
+    if (c) {
+      for (const_literal_iterator i = c->begin (); i != c->end (); i++) {
+        int other = *i;
+        if (other == lit) continue;
+        justify_lit (-other);
+      }
+      chain.push_back (c->id);
     }
-    chain.push_back (c->id);
   }
   f.justified = true;
 }
 
 void Internal::build_chain () {
+  if (!opts.lrat) return;
   assert (conflict), assert (chain.empty());
   for (Flags& f : ftab) f.justified = false;
   for (const_literal_iterator i = conflict->begin (); i != conflict->end (); i++)
@@ -695,6 +701,7 @@ void Internal::analyze () {
   // Actual conflict on root level, thus formula unsatisfiable.
   //
   if (!level) {
+    LOG ("found conflict at root level");
     build_chain ();
     learn_empty_clause ();
     STOP (analyze);

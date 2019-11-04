@@ -459,7 +459,7 @@ void Checker::add_clause (const char * type) {
   } else insert ();
 }
 
-void Checker::add_original_clause (const vector<int> & c) {
+void Checker::add_original_clause (int64_t, const vector<int> & c) {
   if (inconsistent) return;
   START (checking);
   LOG (c, "CHECKER addition of original clause");
@@ -474,7 +474,7 @@ void Checker::add_original_clause (const vector<int> & c) {
   STOP (checking);
 }
 
-void Checker::add_derived_clause (const vector<int64_t> &, const vector<int> & c) {
+void Checker::add_derived_clause (int64_t, const vector<int64_t> *, const vector<int> & c) {
   if (inconsistent) return;
   START (checking);
   LOG (c, "CHECKER addition of derived clause");
@@ -498,7 +498,7 @@ void Checker::add_derived_clause (const vector<int64_t> &, const vector<int> & c
 
 /*------------------------------------------------------------------------*/
 
-void Checker::delete_clause (const vector<int> & c) {
+void Checker::delete_clause (int64_t, const vector<int> & c) {
   if (inconsistent) return;
   START (checking);
   LOG (c, "CHECKER checking deletion of clause");
