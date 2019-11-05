@@ -107,12 +107,11 @@ void Tracer::delete_clause (int64_t id, const vector<int> & clause) {
   else file->put ("d ");
   if (lrat) {
     if (binary) put_binary_clause_id (id);
-    else file->put (id), file->put (' ');
-  } else {
-    for (const auto & external_lit : clause)
-      if (binary) put_binary_lit (external_lit);
-      else file->put (external_lit), file->put (' ');
+    else file->put (id), file->put ("  ");
   }
+  for (const auto & external_lit : clause)
+    if (binary) put_binary_lit (external_lit);
+    else file->put (external_lit), file->put (' ');
   if (binary) put_binary_zero ();
   else file->put ("0\n");
   deleted++;

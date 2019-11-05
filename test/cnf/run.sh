@@ -30,7 +30,7 @@ die "needs to be called from a top-level sub-directory of CaDiCaL"
 
 echo -n "$HILITE"
 echo "---------------------------------------------------------"
-echo "CNF testing in '$CADICALBUILD'" 
+echo "CNF testing in '$CADICALBUILD'"
 echo "---------------------------------------------------------"
 echo -n "$NORMAL"
 
@@ -44,6 +44,7 @@ coresolver="$CADICALBUILD/cadical"
 simpsolver="$CADICALBUILD/../scripts/run-simplifier-and-extend-solution.sh"
 proofchecker=$CADICALBUILD/drat-trim
 solutionchecker=$CADICALBUILD/precochk
+fratchecker=../../frat/frat-rs/target/release/frat-rs
 makefile=$CADICALBUILD/makefile
 
 if [ ! -f $proofchecker -o ! -f $solutionchecker ]
@@ -104,7 +105,7 @@ core () {
   then
     proofopts=""
   else
-    proofopts=" $prf"
+    proofopts=" $prf --lrat=true"
   fi
   opts="$cnf --check$solopts$proofopts"
   echo "$coresolver \\"
@@ -112,7 +113,7 @@ core () {
   echo -n "# $2 ..."
   "$coresolver" $opts 1>$log 2>$err
   res=$?
-  if [ ! $res = $2 ] 
+  if [ ! $res = $2 ]
   then
     echo " ${BAD}FAILED${NORMAL} (actual exit code $res)"
     failed=`expr $failed + 1`
@@ -143,21 +144,29 @@ core () {
   elif [ $res = 20 ]
   then
     echo " ${GOOD}ok${NORMAL} (exit code as expected)"
-    if [ ! x"$proofchecker" = xnone ]
+  #   if [ ! x"$proofchecker" = xnone ]
+  #   then
+  #     echo "$proofchecker \\"
+  #     echo "$cnf $prf"
+  #     echo -n "# 0 ..."
+  #     if $proofchecker $cnf $prf 1>&2 >$chk
+  #     then
+	# echo " ${GOOD}ok${NORMAL} (proof checked)"
+	# ok=`expr $ok + 1`
+  #     else
+	# echo " ${BAD}FAILED${NORMAL} (proof check '$proofchecker $cnf $prf' failed)"
+	# failed=`expr $failed + 1`
+  #     fi
+  #   fi
+    if $fratchecker -l $prf
     then
-      echo "$proofchecker \\"
-      echo "$cnf $prf"
-      echo -n "# 0 ..."
-      if $proofchecker $cnf $prf 1>&2 >$chk
-      then
-	echo " ${GOOD}ok${NORMAL} (proof checked)"
-	ok=`expr $ok + 1`
-      else
-	echo " ${BAD}FAILED${NORMAL} (proof check '$proofchecker $cnf $prf' failed)"
-	failed=`expr $failed + 1`
-      fi
+      echo " ${GOOD}ok${NORMAL} (proof checked)"
+      ok=`expr $ok + 1`
+    else
+      echo " ${BAD}FAILED${NORMAL} (proof check '$fratchecker -l $prf' failed)"
+      failed=`expr $failed + 1`
     fi
-  else 
+  else
     echo " ${BAD}FAILED${NORMAL} (unsupported exit code $res)"
     failed=`expr $failed + 1`
   fi
@@ -176,7 +185,7 @@ simp () {
   echo -n "# $2 ..."
   "$simpsolver" $opts 1>$log 2>$err
   res=$?
-  if [ ! $res = $2 ] 
+  if [ ! $res = $2 ]
   then
     echo " ${BAD}FAILED${NORMAL} (actual exit code $res)"
     failed=`expr $failed + 1`

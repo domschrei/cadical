@@ -154,8 +154,10 @@ void Proof::flush_clause (Clause * c) {
     if (internal->fixed (internal_lit) < 0) continue;
     add_literal (internal_lit);
   }
-  add_derived_clause (c->id);
+  int64_t id = ++internal->clause_id;
+  add_derived_clause (id);
   delete_clause (c);
+  c->id = id;
 }
 
 // While strengthening clauses, e.g., through self-subsuming resolutions,

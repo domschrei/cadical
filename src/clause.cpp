@@ -346,8 +346,20 @@ void Internal::add_new_original_clause (int64_t id) {
     int64_t cid = original.size () > size ? ++clause_id : id;
     if (!size) {
       if (!unsat) {
-        if (!original.size ()) MSG ("found empty original clause");
-        else MSG ("found falsified original clause");
+        if (!original.size ()) {
+          MSG ("found empty original clause");
+        } else {
+          MSG ("found falsified original clause");
+          if (opts.lrat) {
+            chain.clear();
+            for (const auto & lit : original) {
+              int64_t uid = var (lit).unit_id;
+              assert(uid);
+              chain.push_back(uid);
+            }
+            chain.push_back(id);
+          }
+        }
         unsat = true;
       }
     } else if (size == 1) {
@@ -364,6 +376,7 @@ void Internal::add_new_original_clause (int64_t id) {
         proof->delete_clause (id, original);
       }
     }
+    if (proof && unsat) proof->finalize_clause(cid, clause);
   }
   clause.clear ();
 }

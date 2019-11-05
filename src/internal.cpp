@@ -609,9 +609,11 @@ int Internal::solve () {
 
 void Internal::finalize () {
   if (!proof || !opts.lrat) return;
+  LOG ("finalizing");
   for (int idx = 1; idx <= max_var; idx++) {
     int64_t id = var (idx).unit_id;
-    if (!id) continue;
+    if (!val (idx)) continue;
+    assert (id);
     proof->finalize_clause(id, {idx * val (idx)});
   }
   for (const auto & c : clauses)
