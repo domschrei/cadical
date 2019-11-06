@@ -133,7 +133,7 @@ inline int Internal::hyper_binary_resolve (Clause * reason) {
     assert (clause.empty ());
     clause.push_back (-dom);
     clause.push_back (lits[0]);
-    LOG ("PROOF missing chain (hyper binary resolution)"); // TODO(Mario)
+    PROOF_TODO(proof, "hyper binary resolution", 70); // TODO(Mario)
     Clause * c = new_hyper_binary_resolved_clause (red, 2);
     if (red) c->hyper = true;
     clause.clear ();
@@ -168,7 +168,7 @@ inline void Internal::probe_assign (int lit, int parent) {
   const signed char tmp = sign (lit);
   v.parent = tmp < 0 ? -parent : parent;
   if (!level) {
-    LOG ("PROOF missing chain (probe assign)"); // TODO(Mario)
+    PROOF_TODO(proof, "probe assign", 71); // TODO(Mario)
     learn_unit_clause (lit);
   }
   else assert (level == 1);

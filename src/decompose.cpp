@@ -115,9 +115,9 @@ bool Internal::decompose_round () {
                 other = scc[--j];
                 if (other == -parent) {
                   LOG ("both %d and %d in one SCC", parent, -parent);
-                  LOG ("PROOF missing chain (SCC 1)"); // TODO(Mario)
+                  PROOF_TODO(proof, "SCC 1", 41); // TODO(Mario)
                   assign_unit (parent);
-                  LOG ("PROOF missing chain (SCC 2)"); // TODO(Mario)
+                  PROOF_TODO(proof, "SCC 2", 42); // TODO(Mario)
                   learn_empty_clause ();
                 } else {
                   if (abs (other) < abs (repr)) repr = other;
@@ -251,11 +251,11 @@ bool Internal::decompose_round () {
       garbage++;
     } else if (!clause.size ()) {
       LOG ("learned empty clause during decompose");
-      LOG ("PROOF missing chain (decompose empty)"); // TODO(Mario)
+      PROOF_TODO(proof, "decompose empty", 43); // TODO(Mario)
       learn_empty_clause ();
     } else if (clause.size () == 1) {
       LOG (c, "unit %d after substitution", clause[0]);
-      LOG ("PROOF missing chain (decompose unit)"); // TODO(Mario)
+      PROOF_TODO(proof, "decompose unit", 44); // TODO(Mario)
       assign_unit (clause[0]);
       mark_garbage (c);
       new_unit = true;
@@ -265,7 +265,7 @@ bool Internal::decompose_round () {
       LOG ("need new clause since at least one watched literal changed");
       if (clause.size () == 2) new_binary_clause = true;
       size_t d_clause_idx = clauses.size ();
-      LOG ("PROOF missing chain (decompose new)"); // TODO(Mario)
+      PROOF_TODO(proof, "decompose new", 45); // TODO(Mario)
       Clause * d = new_clause_as (c);
       assert (clauses[d_clause_idx] == d);
       clauses[d_clause_idx] = c;
@@ -278,7 +278,7 @@ bool Internal::decompose_round () {
       if (!c->redundant) mark_removed (c);
       int64_t id = ++clause_id;
       if (proof) {
-        LOG ("PROOF missing chain (decompose shrink)"); // TODO(Mario)
+        PROOF_TODO(proof, "decompose shrink", 46); // TODO(Mario)
         proof->add_derived_clause (id, clause);
         proof->delete_clause (c);
       }

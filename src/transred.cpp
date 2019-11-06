@@ -169,7 +169,7 @@ void Internal::transred () {
       LOG ("found failed literal %d during transitive reduction", src);
       stats.failed++;
       stats.transredunits++;
-      LOG ("PROOF missing chain (transitive reduction unit)"); // TODO(Mario)
+      PROOF_TODO(proof, "transitive reduction unit", 90); // TODO(Mario)
       assign_unit (-src);
       if (!propagate ()) {
         VERBOSE (1, "propagating new unit results in conflict");

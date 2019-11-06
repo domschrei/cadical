@@ -69,7 +69,7 @@ void Internal::mark_binary_literals (Eliminator & eliminator, int first) {
     const int tmp = marked (second);
     if (tmp < 0) {
       LOG ("found binary resolved unit %d", first);
-      LOG ("PROOF missing chain (mark binary literals unit)"); // TODO(Mario)
+      PROOF_TODO(proof, "mark binary literals unit", 60); // TODO(Mario)
       assign_unit (first);
       elim_propagate (eliminator, first);
       return;
@@ -124,7 +124,7 @@ void Internal::find_equivalence (Eliminator & eliminator, int pivot) {
     const int tmp = marked (second);
     if (tmp > 0) {
       LOG ("found binary resolved unit %d", second);
-      LOG ("PROOF missing chain (find equivalence unit)"); // TODO(Mario)
+      PROOF_TODO(proof, "find equivalence unit", 61); // TODO(Mario)
       assign_unit (second);
       elim_propagate (eliminator, second);
       if (val (pivot)) break;

@@ -149,12 +149,12 @@ void Internal::elim_propagate (Eliminator & eliminator, int root) {
         mark_garbage (c);
       } else if (!unit) {
         LOG ("empty clause during elimination propagation of %d", lit);
-        LOG ("PROOF missing chain (elim propagate empty)"); // TODO(Mario)
+        PROOF_TODO(proof, "elim propagate empty", 50); // TODO(Mario)
         learn_empty_clause ();
         break;
       } else if (unit != INT_MIN) {
         LOG ("new unit %d during elimination propagation of %d", unit, lit);
-        LOG ("PROOF missing chain (elim propagate unit)"); // TODO(Mario)
+        PROOF_TODO(proof, "elim propagate unit", 51); // TODO(Mario)
         assign_unit (unit);
         work.push_back (unit);
       }
@@ -192,7 +192,7 @@ void Internal::elim_on_the_fly_self_subsumption (Eliminator & eliminator,
     if (tmp < 0) continue;
     clause.push_back (lit);
   }
-  LOG ("PROOF missing chain (self subsumption)"); // TODO(Mario)
+  PROOF_TODO(proof, "self subsumption", 52); // TODO(Mario)
   Clause * r = new_resolved_irredundant_clause ();
   elim_update_added_clause (eliminator, r);
   clause.clear ();
@@ -295,7 +295,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
   if (!size) {
     clause.clear ();
     LOG ("empty resolvent");
-    LOG ("PROOF missing chain (resolve empty)"); // TODO(Mario)
+    PROOF_TODO(proof, "resolve empty", 53); // TODO(Mario)
     learn_empty_clause ();
     return false;
   }
@@ -303,7 +303,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
   if (size == 1) {
     int unit = clause[0];
     LOG ("unit resolvent %d", unit);
-    LOG ("PROOF missing chain (resolve unit)"); // TODO(Mario)
+    PROOF_TODO(proof, "resolve unit", 54); // TODO(Mario)
     assign_unit (unit);
     elim_propagate (eliminator, unit);
     return false;
@@ -453,7 +453,7 @@ Internal::elim_add_resolvents (Eliminator & eliminator, int pivot) {
       if (substitute && c->gate == d->gate) continue;
       if (!resolve_clauses (eliminator, c, pivot, d)) continue;
       assert (clause.size () <= (size_t) opts.elimclslim);
-      LOG ("PROOF missing chain (resolvent)"); // TODO(Mario)
+      PROOF_TODO(proof, "resolvent", 55); // TODO(Mario)
       Clause * r = new_resolved_irredundant_clause ();
       elim_update_added_clause (eliminator, r);
       eliminator.enqueue (r);

@@ -144,6 +144,11 @@ void Proof::finalize_clause_ext (int64_t id) {
   finalize_clause (id);
 }
 
+void Proof::add_todo (const vector<int64_t> & c) {
+  for (size_t i = 0; i < observers.size (); i++)
+    observers[i]->add_todo (c);
+}
+
 /*------------------------------------------------------------------------*/
 
 // During garbage collection clauses are shrunken by removing falsified

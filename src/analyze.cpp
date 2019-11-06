@@ -677,7 +677,7 @@ void Internal::analyze () {
       backtrack (conflict_level - 1);
 
       LOG ("forcing %d", forced);
-      LOG ("PROOF missing chain (forced)"); // TODO(Mario)
+      PROOF_TODO(proof, "forced", 10); // TODO(Mario)
       search_assign_driving (forced, conflict);
 
       conflict = 0;

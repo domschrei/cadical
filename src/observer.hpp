@@ -29,6 +29,8 @@ public:
   //
   virtual void finalize_clause (int64_t, const vector<int> &) { }
 
+  virtual void add_todo (const vector<int64_t> &) { }
+
   virtual void flush () { }
 };
 

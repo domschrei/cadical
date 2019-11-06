@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include <sstream>
 
 namespace CaDiCaL {
 
@@ -128,6 +129,21 @@ void Tracer::finalize_clause (int64_t id, const vector<int> & clause) {
   for (const auto & external_lit : clause)
     if (binary) put_binary_lit (external_lit);
     else file->put (external_lit), file->put (' ');
+  if (binary) put_binary_zero ();
+  else file->put ("0\n");
+}
+
+void Tracer::add_todo (const vector<int64_t> & vals) {
+  if (!lrat) return;
+  if (file->closed ()) return;
+  ostringstream ss;
+  for (auto c : vals) ss << " " << c;
+  LOG ("TRACER tracing TODO%s", ss.str().c_str());
+  if (binary) file->put ('t');
+  else file->put ("t ");
+  for (const auto & val : vals)
+    if (binary) put_binary_clause_id (val);
+    else file->put (val), file->put (' ');
   if (binary) put_binary_zero ();
   else file->put ("0\n");
 }

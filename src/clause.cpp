@@ -371,7 +371,7 @@ void Internal::add_new_original_clause (int64_t id) {
     if (original.size () > size) {
       external->check_learned_clause ();
       if (proof) {
-        LOG ("PROOF missing chain (minified original clause)"); // TODO(Mario)
+        PROOF_TODO(proof, "minified original clause", 30); // TODO(Mario)
         proof->add_derived_clause (cid, clause);
         proof->delete_clause (id, original);
       }

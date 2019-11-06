@@ -63,9 +63,15 @@ public:
   void flush_clause (Clause *);           // remove falsified literals
   void strengthen_clause (Clause *, int); // remove second argument
 
+  void add_todo (const vector<int64_t> &);
+
   void flush ();
 };
 
 }
+
+#define PROOF_TODO(proof, s, ...) { \
+  LOG ("PROOF missing chain (" s ")"); \
+  proof->add_todo({__VA_ARGS__}); }
 
 #endif
