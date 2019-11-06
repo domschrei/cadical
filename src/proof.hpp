@@ -56,6 +56,7 @@ public:
   //
   void finalize_clause (int64_t, const vector<int> &);
   void finalize_clause (Clause *);
+  void finalize_clause_ext (int64_t);
 
   // These two actually pretend to add and remove a clause.
   //

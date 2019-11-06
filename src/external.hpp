@@ -47,11 +47,12 @@ struct External {
 
   /*----------------------------------------------------------------------*/
 
-  Internal * internal;    // The actual internal solver.
-  int max_var;            // External maximum variable index.
+  Internal * internal;      // The actual internal solver.
+  int max_var;              // External maximum variable index.
   size_t vsize;
-  vector<bool> vals;      // Current external (extended) assignment.
-  vector<int> e2i;        // External 'idx' to internal 'lit' [1,max_var].
+  vector<bool> vals;        // Current external (extended) assignment.
+  vector<int64_t> unit_id;  // Unit clause ids for external assignment.
+  vector<int> e2i;          // External 'idx' to internal 'lit' [1,max_var].
 
   vector<int> assumptions;      // External assumptions.
 
@@ -228,7 +229,7 @@ struct External {
   // We call it 'ival' as abbreviation for 'val' with 'int' return type to
   // avoid bugs due to using 'signed char tmp = val (lit)', which might turn
   // a negative value into a positive one (happened in 'extend').
-  // 
+  //
   inline int ival (int elit) const {
     assert (elit != INT_MIN);
     int eidx = abs (elit), res;

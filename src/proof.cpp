@@ -140,6 +140,10 @@ void Proof::finalize_clause (int64_t id, const vector<int> & c) {
   finalize_clause (id);
 }
 
+void Proof::finalize_clause_ext (int64_t id) {
+  finalize_clause (id);
+}
+
 /*------------------------------------------------------------------------*/
 
 // During garbage collection clauses are shrunken by removing falsified

@@ -610,11 +610,20 @@ int Internal::solve () {
 void Internal::finalize () {
   if (!proof || !opts.lrat) return;
   LOG ("finalizing");
-  for (int idx = 1; idx <= max_var; idx++) {
-    int64_t id = var (idx).unit_id;
-    if (!val (idx)) continue;
-    assert (id);
-    proof->finalize_clause(id, {idx * val (idx)});
+  for (int eidx = 1; eidx <= external->max_var; eidx++) {
+    int idx = external->e2i[eidx];
+    int64_t id; int lit = eidx;
+    if (idx) {
+      id = var (idx).unit_id;
+      lit *= val (idx);
+    } else {
+      id = external->unit_id[eidx];
+      if ((unsigned) eidx >= external->vals.size() || !external->vals[eidx])
+        lit = -lit;
+    }
+    if (!id) continue;
+    clause.clear(); clause.push_back(lit);
+    proof->finalize_clause_ext(id);
   }
   for (const auto & c : clauses)
     if (!c->garbage) proof->finalize_clause(c);
