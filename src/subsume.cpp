@@ -126,7 +126,10 @@ inline int Internal::subsume_check (Clause * subsuming, Clause * subsumed)
 
   if (!flipped) return INT_MIN;                   // subsumed!!
   else if (!opts.subsumestr) return 0;
-  else return flipped;                            // strengthen!!
+  else {
+    chain = {subsuming->id, subsumed->id};
+    return flipped;                            // strengthen!!
+  }
 }
 
 /*------------------------------------------------------------------------*/

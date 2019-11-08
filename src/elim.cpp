@@ -295,7 +295,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
   if (!size) {
     clause.clear ();
     LOG ("empty resolvent");
-    PROOF_TODO (proof, "resolve empty", 53); // TODO(Mario)
+    chain = {c->id, d->id};
     learn_empty_clause ();
     return false;
   }
@@ -303,7 +303,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
   if (size == 1) {
     int unit = clause[0];
     LOG ("unit resolvent %d", unit);
-    PROOF_TODO (proof, "resolve unit", 54); // TODO(Mario)
+    chain = {c->id, d->id};
     assign_unit (unit);
     elim_propagate (eliminator, unit);
     return false;
@@ -453,7 +453,7 @@ Internal::elim_add_resolvents (Eliminator & eliminator, int pivot) {
       if (substitute && c->gate == d->gate) continue;
       if (!resolve_clauses (eliminator, c, pivot, d)) continue;
       assert (clause.size () <= (size_t) opts.elimclslim);
-      PROOF_TODO (proof, "resolvent", 55); // TODO(Mario)
+      chain = {c->id, d->id};
       Clause * r = new_resolved_irredundant_clause ();
       elim_update_added_clause (eliminator, r);
       eliminator.enqueue (r);

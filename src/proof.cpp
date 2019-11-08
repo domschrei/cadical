@@ -159,11 +159,16 @@ void Proof::add_todo (const vector<int64_t> & c) {
 void Proof::flush_clause (Clause * c) {
   LOG (c, "PROOF flushing falsified literals in");
   assert (clause.empty ());
+  internal->chain.clear ();
   for (int i = 0; i < c->size; i++) {
     int internal_lit = c->literals[i];
-    if (internal->fixed (internal_lit) < 0) continue;
+    if (internal->fixed (internal_lit) < 0) {
+      internal->chain.push_back(internal->var (internal_lit).unit_id);
+      continue;
+    }
     add_literal (internal_lit);
   }
+  internal->chain.push_back(c->id);
   int64_t id = ++internal->clause_id;
   add_derived_clause (id);
   delete_clause (c);
