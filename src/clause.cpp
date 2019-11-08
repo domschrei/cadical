@@ -294,6 +294,7 @@ void Internal::assign_original_unit (int64_t id, int lit) {
   v.trail = (int) trail.size ();
   v.reason = 0;
   v.unit_id = id;
+  external->set_unit_id (i2e[idx], id);
   const signed char tmp = sign (lit);
   vals[idx] = tmp;
   vals[-idx] = -tmp;

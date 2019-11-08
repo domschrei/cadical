@@ -138,6 +138,13 @@ struct External {
     if (ulit < map.size ()) map[ulit] = false;
   }
 
+  void set_unit_id (unsigned eidx, int64_t id) {
+    assert (eidx <= (unsigned) max_var);
+    while (unit_id.size () <= eidx)
+      unit_id.push_back (0);
+    unit_id[eidx] = id;
+  }
+
   vector<bool> witness;
   vector<bool> tainted;
 

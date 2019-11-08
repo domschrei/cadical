@@ -32,10 +32,7 @@ void Internal::learn_unit_clause (int lit) {
     var (lit).unit_id = id;
     int eidx = i2e[abs (lit)];
     LOG ("learned unit clause [%ld] %d (external %d)", id, lit, eidx);
-    assert (eidx <= external->max_var);
-    while (external->unit_id.size () <= (unsigned) eidx)
-      external->unit_id.push_back (0);
-    external->unit_id[eidx] = id;
+    external->set_unit_id (eidx, id);
     proof->add_derived_unit_clause (id, lit);
   } else {
     LOG ("learned unit clause [%ld] %d", id, lit);
