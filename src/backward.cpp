@@ -109,7 +109,7 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
           } else if (unit && unit != INT_MIN) {
             assert (unit);
             LOG (d, "unit %d through hyper unary resolution with", unit);
-            PROOF_TODO(proof, "hyper unary resolution unit", 20); // TODO(Mario)
+            PROOF_TODO (proof, "hyper unary resolution unit", 20); // TODO(Mario)
             assign_unit (unit);
             elim_propagate (eliminator, unit);
             break;

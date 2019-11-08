@@ -56,7 +56,7 @@ public:
   //
   void finalize_clause (int64_t, const vector<int> &);
   void finalize_clause (Clause *);
-  void finalize_clause_ext (int64_t);
+  void finalize_clause_ext (int64_t, const vector<int> &);
 
   // These two actually pretend to add and remove a clause.
   //
@@ -70,7 +70,7 @@ public:
 
 }
 
-#define PROOF_TODO(proof, s, ...) { \
+#define PROOF_TODO(proof, s, ...) if (proof) { \
   LOG ("PROOF missing chain (" s ")"); \
   proof->add_todo({__VA_ARGS__}); }
 

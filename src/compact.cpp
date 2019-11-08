@@ -202,11 +202,6 @@ void Internal::compact () {
     LOG ("compact %" PRId64 " maps external %d to internal %d from internal %d",
       stats.compacts, eidx, dst, src);
     external->e2i[eidx] = dst;
-    if (!dst) {
-      while (external->unit_id.size() <= (unsigned) eidx)
-        external->unit_id.push_back(0);
-      external->unit_id[eidx] = var (src).unit_id;
-    }
   }
 
   // Map the literals in all clauses.

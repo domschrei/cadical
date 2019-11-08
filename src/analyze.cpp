@@ -15,10 +15,10 @@ namespace CaDiCaL {
 
 void Internal::learn_empty_clause () {
   assert (!unsat);
-  LOG ("learned empty clause");
+  int64_t id = ++clause_id;
+  LOG ("learned empty clause [%ld]", id);
   external->check_learned_empty_clause ();
   if (proof) {
-    int64_t id = ++clause_id;
     proof->add_derived_empty_clause (id);
     proof->finalize_clause (id, clause);
   }
@@ -26,12 +26,19 @@ void Internal::learn_empty_clause () {
 }
 
 void Internal::learn_unit_clause (int lit) {
-  LOG ("learned unit clause %d", lit);
+  int64_t id = ++clause_id;
   external->check_learned_unit_clause (lit);
   if (proof) {
-    int64_t id = ++clause_id;
     var (lit).unit_id = id;
+    int eidx = i2e[abs (lit)];
+    LOG ("learned unit clause [%ld] %d (external %d)", id, lit, eidx);
+    assert (eidx <= external->max_var);
+    while (external->unit_id.size () <= (unsigned) eidx)
+      external->unit_id.push_back (0);
+    external->unit_id[eidx] = id;
     proof->add_derived_unit_clause (id, lit);
+  } else {
+    LOG ("learned unit clause [%ld] %d", id, lit);
   }
   mark_fixed (lit);
 }
@@ -379,7 +386,7 @@ void Internal::justify_lit (int lit) {
 
 void Internal::build_chain () {
   if (!opts.lrat) return;
-  assert (conflict), assert (chain.empty());
+  assert (conflict), assert (chain.empty ());
   for (Flags& f : ftab) f.justified = false;
   for (const_literal_iterator i = conflict->begin (); i != conflict->end (); i++)
     justify_lit (-*i);
@@ -388,7 +395,7 @@ void Internal::build_chain () {
 #ifdef LOGGING
   ostringstream ss;
   for (auto c : chain) ss << " " << c;
-  LOG ("PROOF built chain%s", ss.str().c_str());
+  LOG ("PROOF built chain%s", ss.str ().c_str ());
 #endif
 }
 
@@ -677,7 +684,7 @@ void Internal::analyze () {
       backtrack (conflict_level - 1);
 
       LOG ("forcing %d", forced);
-      PROOF_TODO(proof, "forced", 10); // TODO(Mario)
+      PROOF_TODO (proof, "forced", 10); // TODO(Mario)
       search_assign_driving (forced, conflict);
 
       conflict = 0;

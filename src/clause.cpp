@@ -351,13 +351,13 @@ void Internal::add_new_original_clause (int64_t id) {
         } else {
           MSG ("found falsified original clause");
           if (opts.lrat) {
-            chain.clear();
+            chain.clear ();
             for (const auto & lit : original) {
               int64_t uid = var (lit).unit_id;
-              assert(uid);
-              chain.push_back(uid);
+              assert (uid);
+              chain.push_back (uid);
             }
-            chain.push_back(id);
+            chain.push_back (id);
           }
         }
         unsat = true;
@@ -371,12 +371,12 @@ void Internal::add_new_original_clause (int64_t id) {
     if (original.size () > size) {
       external->check_learned_clause ();
       if (proof) {
-        PROOF_TODO(proof, "minified original clause", 30); // TODO(Mario)
+        PROOF_TODO (proof, "minified original clause", 30); // TODO(Mario)
         proof->add_derived_clause (cid, clause);
         proof->delete_clause (id, original);
       }
     }
-    if (proof && unsat) proof->finalize_clause(cid, clause);
+    if (proof && unsat) proof->finalize_clause (cid, clause);
   }
   clause.clear ();
 }

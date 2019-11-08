@@ -610,23 +610,17 @@ int Internal::solve () {
 void Internal::finalize () {
   if (!proof || !opts.lrat) return;
   LOG ("finalizing");
-  for (int eidx = 1; eidx <= external->max_var; eidx++) {
-    int idx = external->e2i[eidx];
-    int64_t id; int lit = eidx;
-    if (idx) {
-      id = var (idx).unit_id;
-      lit *= val (idx);
-    } else {
-      id = external->unit_id[eidx];
-      if ((unsigned) eidx >= external->vals.size() || !external->vals[eidx])
-        lit = -lit;
-    }
+  for (unsigned eidx = 1; eidx < external->unit_id.size(); eidx++) {
+    int64_t id = external->unit_id[eidx];
     if (!id) continue;
-    clause.clear(); clause.push_back(lit);
-    proof->finalize_clause_ext(id);
+    int idx = external->e2i[eidx];
+    int lit = idx ? eidx * val (idx) :
+      ((unsigned) eidx >= external->vals.size () || !external->vals[eidx]) ? eidx : -eidx;
+    LOG ("finalizing literal %d [%ld]", lit, id);
+    proof->finalize_clause_ext (id, {lit});
   }
   for (const auto & c : clauses)
-    if (!c->garbage) proof->finalize_clause(c);
+    if (!c->garbage) proof->finalize_clause (c);
 }
 /*------------------------------------------------------------------------*/
 

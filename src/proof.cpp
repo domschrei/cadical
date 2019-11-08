@@ -140,7 +140,8 @@ void Proof::finalize_clause (int64_t id, const vector<int> & c) {
   finalize_clause (id);
 }
 
-void Proof::finalize_clause_ext (int64_t id) {
+void Proof::finalize_clause_ext (int64_t id, const vector<int> & c) {
+  clause = c;
   finalize_clause (id);
 }
 
@@ -183,8 +184,10 @@ void Proof::strengthen_clause (Clause * c, int remove) {
     if (internal_lit == remove) continue;
     add_literal (internal_lit);
   }
-  add_derived_clause (c->id);
+  int64_t id = ++internal->clause_id;
+  add_derived_clause (id);
   delete_clause (c);
+  c->id = id;
 }
 
 /*------------------------------------------------------------------------*/
@@ -198,7 +201,7 @@ void Proof::add_original_clause (int64_t id) {
 
 void Proof::add_derived_clause (int64_t id) {
   LOG (clause, "PROOF adding derived external clause");
-  vector<int64_t> * chain = internal->chain.empty() ? 0 : &internal->chain;
+  vector<int64_t> * chain = internal->chain.empty () ? 0 : &internal->chain;
   for (size_t i = 0; i < observers.size (); i++)
     observers[i]->add_derived_clause (id, chain, clause);
   internal->chain.clear ();
@@ -214,7 +217,7 @@ void Proof::delete_clause (int64_t id) {
 
 void Proof::finalize_clause (int64_t id) {
   if (!internal->opts.lrat) return;
-  LOG (clause, "PROOF finalizing external clause");
+  LOG (clause, "PROOF finalizing external clause [%ld]", id);
   for (size_t i = 0; i < observers.size (); i++)
     observers[i]->finalize_clause (id, clause);
   clause.clear ();

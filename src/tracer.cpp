@@ -138,7 +138,7 @@ void Tracer::add_todo (const vector<int64_t> & vals) {
   if (file->closed ()) return;
   ostringstream ss;
   for (auto c : vals) ss << " " << c;
-  LOG ("TRACER tracing TODO%s", ss.str().c_str());
+  LOG ("TRACER tracing TODO%s", ss.str ().c_str ());
   if (binary) file->put ('t');
   else file->put ("t ");
   for (const auto & val : vals)
