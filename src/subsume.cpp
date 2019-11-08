@@ -219,7 +219,8 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
       // removed in 'c', otherwise to 'INT_MIN' which is a non-valid
       // literal.
       //
-      for (const auto & other : bins (sign*lit) ) {
+      for (const auto & bin : bins (sign*lit) ) {
+        const auto & other = bin.lit;
         const int tmp = marked (other);
         if (!tmp) continue;
         if (tmp < 0 && sign < 0) continue;
@@ -236,6 +237,7 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
         assert (binary_subsuming.size == 2);
         assert (!binary_subsuming.redundant);
         d = &binary_subsuming;
+        chain = {c->id, bin.clause_id};
         break;
       }
 
@@ -519,7 +521,7 @@ bool Internal::subsume_round () {
 
       const int minlit_pos = (c->literals[1] == minlit);
       const int other = c->literals[!minlit_pos];
-      bins (minlit).push_back (other);
+      bins (minlit).push_back (Bin{other, c->id});
     }
   }
 

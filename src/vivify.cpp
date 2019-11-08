@@ -485,6 +485,7 @@ void Internal::vivify_strengthen (Clause * c) {
 
   assert (!clause.empty ());
   stats.vivifystrs++;
+  PROOF_TODO (proof, "vivify strengthen", 101); // TODO(Mario)
 
   if (clause.size () == 1) {
 
