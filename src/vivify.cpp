@@ -56,7 +56,16 @@ inline void Internal::vivify_assign (int lit, Clause * reason) {
   v.trail = (int) trail.size ();        // used in 'vivify_better_watch'
   v.reason = level ? reason : 0;        // for conflict analysis
   if (!level) {
-    PROOF_TODO (proof, "vivify assign", 100); // TODO(Mario)
+    if (proof && reason) {
+      for (const_literal_iterator l = reason->begin (); l != reason->end (); l++) {
+        const int lit2 = *l;
+        if (lit2 == lit) continue;
+        int64_t id = var (lit2).unit_id;
+        assert (id);
+        chain.push_back (id);
+      }
+      chain.push_back (reason->id);
+    }
     learn_unit_clause (lit);
   }
   const signed char tmp = sign (lit);

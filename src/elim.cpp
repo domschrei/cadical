@@ -230,6 +230,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
 
   assert (!level);
   assert (clause.empty ());
+  chain.clear ();
 
   int satisfied = 0;       // Contains this satisfying literal.
   int tautological = 0;    // Clashing literal if tautological.
@@ -245,7 +246,10 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
     assert (lit != -pivot);
     const signed char tmp = val (lit);
     if (tmp > 0) { satisfied = lit; break; }
-    else if (tmp < 0) continue;
+    else if (tmp < 0) {
+      if (proof) chain.push_back (var (lit).unit_id);
+      continue;
+    }
     else mark (lit), clause.push_back (lit), s++;
   }
   if (satisfied) {
@@ -266,7 +270,10 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
     assert (lit != pivot);
     signed char tmp = val (lit);
     if (tmp > 0) { satisfied = lit; break; }
-    else if (tmp < 0) continue;
+    else if (tmp < 0) {
+      if (proof) chain.push_back (var (lit).unit_id);
+      continue;
+    }
     else if ((tmp = marked (lit)) < 0) { tautological = lit; break; }
     else if (!tmp) clause.push_back (lit), t++;
     else assert (tmp > 0), t++;
@@ -292,10 +299,11 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
     return false;
   }
 
+  if (proof) chain.push_back (c->id), chain.push_back (d->id);
+
   if (!size) {
     clause.clear ();
     LOG ("empty resolvent");
-    chain = {c->id, d->id};
     learn_empty_clause ();
     return false;
   }
@@ -303,7 +311,6 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
   if (size == 1) {
     int unit = clause[0];
     LOG ("unit resolvent %d", unit);
-    chain = {c->id, d->id};
     assign_unit (unit);
     elim_propagate (eliminator, unit);
     return false;
@@ -318,7 +325,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
   if (s > size && t > size) {
     assert (s == size + 1);
     assert (t == size + 1);
-    clause.clear ();
+    clause.clear (), chain.clear ();
     elim_on_the_fly_self_subsumption (eliminator, c, pivot);
     LOG (d, "double pivot %d on-the-fly self-subsuming resolution", -pivot);
     stats.elimotfsub++;
@@ -334,7 +341,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
 
   if (s > size) {
     assert (s == size + 1);
-    clause.clear ();
+    clause.clear (), chain.clear ();
     elim_on_the_fly_self_subsumption (eliminator, c, pivot);
     return false;
   }
@@ -343,7 +350,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
 
   if (t > size) {
     assert (t == size + 1);
-    clause.clear ();
+    clause.clear (), chain.clear ();
     elim_on_the_fly_self_subsumption (eliminator, d, -pivot);
     return false;
   }
@@ -399,7 +406,7 @@ Internal::elim_resolvents_are_bounded (Eliminator & eliminator, int pivot)
       if (resolve_clauses (eliminator, c, pivot, d)) {
         resolvents++;
         int size = clause.size ();
-        clause.clear ();
+        clause.clear (), chain.clear ();
         LOG ("now at least %" PRId64 " non-tautological resolvents on pivot %d",
           resolvents, pivot);
         if (size > opts.elimclslim) {
@@ -453,7 +460,6 @@ Internal::elim_add_resolvents (Eliminator & eliminator, int pivot) {
       if (substitute && c->gate == d->gate) continue;
       if (!resolve_clauses (eliminator, c, pivot, d)) continue;
       assert (clause.size () <= (size_t) opts.elimclslim);
-      chain = {c->id, d->id};
       Clause * r = new_resolved_irredundant_clause ();
       elim_update_added_clause (eliminator, r);
       eliminator.enqueue (r);

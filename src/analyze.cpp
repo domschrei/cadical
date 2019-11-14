@@ -360,22 +360,27 @@ struct analyze_trail_larger {
 // newly learnt clause
 
 static vector<signed char> justified;
+static vector<Clause*> old_reasons;
 
 void Internal::justify_lit (int lit) {
   Flags & f = flags (lit);
   if (f.justified) return;
   Var & v = var (lit);
   if (v.unit_id) {
+    // LOG ("PROOF justify %d with %ld unit", lit, v.unit_id);
     chain.push_back (v.unit_id);
   } else {
     Clause* c = v.reason;
     if (c) {
+      // LOG ("PROOF justify %d with %ld", lit, c->id);
       for (const_literal_iterator i = c->begin (); i != c->end (); i++) {
         int other = *i;
         if (other == lit) continue;
         justify_lit (-other);
       }
       chain.push_back (c->id);
+    } else {
+      // LOG ("PROOF justify %d hyp", lit);
     }
   }
   f.justified = true;
@@ -384,10 +389,19 @@ void Internal::justify_lit (int lit) {
 void Internal::build_chain () {
   if (!opts.lrat) return;
   assert (conflict), assert (chain.empty ());
+  for (const auto & lit : clause) {
+    Clause * & cl = var (lit).reason;
+    old_reasons.push_back(cl);
+    cl = 0;
+  }
   for (Flags& f : ftab) f.justified = false;
   for (const_literal_iterator i = conflict->begin (); i != conflict->end (); i++)
     justify_lit (-*i);
   chain.push_back (conflict->id);
+  for (unsigned i = 0; i < clause.size(); i++) {
+    var (clause[i]).reason = old_reasons[i];
+  }
+  old_reasons.clear();
 
 #ifdef LOGGING
   ostringstream ss;
