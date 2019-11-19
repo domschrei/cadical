@@ -135,7 +135,7 @@ bool Internal::decompose_round () {
                   scc.pop_back ();
                   dfs[vlit (other)].min = TRAVERSED;
                   if (frozen (other)) {
-                    reprs[vlit (other) ] = other;
+                    reprs[vlit (other)] = other;
                   } else {
                     reprs[vlit (other)] = repr;
                     if (other != repr) {
@@ -278,11 +278,12 @@ bool Internal::decompose_round () {
       if (!c->redundant) mark_removed (c);
       int64_t id = ++clause_id;
       if (proof) {
-        for (const_literal_iterator i = c->begin (); i != c->end (); i++) {
-          int id = var (*i).unit_id;
-          if (id) chain.push_back (id);
-        }
-        chain.push_back (c->id);
+        // for (const_literal_iterator i = c->begin (); i != c->end (); i++) {
+        //   int id = var (*i).unit_id;
+        //   if (id) chain.push_back (id);
+        // }
+        // chain.push_back (c->id);
+        PROOF_TODO (proof, "decompose shrink", 46); // TODO(Mario)
         proof->add_derived_clause (id, clause);
         proof->delete_clause (c);
       }
