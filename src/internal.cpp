@@ -620,7 +620,8 @@ void Internal::finalize () {
     proof->finalize_clause_ext (id, {lit});
   }
   for (const auto & c : clauses)
-    if (!c->garbage) proof->finalize_clause (c);
+    // See the discussion in 'propagate' on why garbage binary clauses stick around.
+    if (!c->garbage || c->size == 2) proof->finalize_clause (c);
 }
 /*------------------------------------------------------------------------*/
 
