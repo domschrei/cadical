@@ -284,7 +284,8 @@ uint64_t Checker::reduce_hash (uint64_t hash, uint64_t size) {
   return res;
 }
 
-uint64_t Checker::compute_hash () {
+uint64_t Checker::compute_hash (int64_t id) {
+  if (id) return last_hash = (uint64_t) id;
   unsigned i = 0, j = 0;
   uint64_t tmp = 0;
   for (i = 0; i < simplified.size (); i++) {
@@ -295,10 +296,22 @@ uint64_t Checker::compute_hash () {
   return last_hash = tmp;
 }
 
-CheckerClause ** Checker::find () {
+CheckerClause ** Checker::find_id (int64_t id) {
+  assert (id);
   stats.searches++;
   CheckerClause ** res, * c;
-  const uint64_t hash = compute_hash ();
+  const uint64_t h = reduce_hash (id, size_clauses);
+  for (res = clauses + h; (c = *res); res = &c->next) {
+    if (c->hash == (uint64_t) id) break;
+    stats.collisions++;
+  }
+  return res;
+}
+
+CheckerClause ** Checker::find (int64_t id) {
+  stats.searches++;
+  CheckerClause ** res, * c;
+  const uint64_t hash = compute_hash (id);
   const unsigned size = simplified.size ();
   const uint64_t h = reduce_hash (hash, size_clauses);
   for (const auto & lit : simplified) mark (lit) = true;
@@ -316,10 +329,10 @@ CheckerClause ** Checker::find () {
   return res;
 }
 
-void Checker::insert () {
+void Checker::insert (int64_t id) {
   stats.insertions++;
   if (num_clauses == size_clauses) enlarge_clauses ();
-  const uint64_t h = reduce_hash (compute_hash (), size_clauses);
+  const uint64_t h = reduce_hash (compute_hash (id), size_clauses);
   CheckerClause * c = new_clause ();
   c->next = clauses[h];
   clauses[h] = c;
@@ -415,20 +428,40 @@ bool Checker::propagate () {
   return res;
 }
 
-bool Checker::check () {
+bool Checker::propagate_chain (const vector<int64_t> * chain) {
+  if (!chain) return propagate ();
+
+  for (int64_t cid : *chain) {
+    auto c = find_id (cid);
+    if (!*c) continue;
+    int size = (*c)->size;
+    int * lits = (*c)->literals;
+    int unit = 0;
+    for (int k = 0; k < size; k++)
+      if (val (lits[k]) >= 0) {
+        if (unit) return false;
+        unit = lits[k];
+      }
+    if (!unit) return true;
+    assign (unit);
+  }
+  return false;
+}
+
+bool Checker::check (const vector<int64_t> * chain) {
   stats.checks++;
   if (inconsistent) return true;
   unsigned previously_propagated = next_to_propagate;
   for (const auto & lit : simplified)
     assume (-lit);
-  bool res = !propagate ();
+  bool res = !propagate_chain (chain);
   backtrack (previously_propagated);
   return res;
 }
 
 /*------------------------------------------------------------------------*/
 
-void Checker::add_clause (const char * type) {
+void Checker::add_clause (int64_t id, const char * type) {
 #ifndef LOGGING
   (void) type;
 #endif
@@ -456,10 +489,10 @@ void Checker::add_clause (const char * type) {
       LOG ("CHECKER inconsistent after propagating %s unit", type);
       inconsistent = true;
     }
-  } else insert ();
+  } else insert (id);
 }
 
-void Checker::add_original_clause (int64_t, const vector<int> & c) {
+void Checker::add_original_clause (int64_t id, const vector<int> & c) {
   if (inconsistent) return;
   START (checking);
   LOG (c, "CHECKER addition of original clause");
@@ -468,13 +501,13 @@ void Checker::add_original_clause (int64_t, const vector<int> & c) {
   import_clause (c);
   if (tautological ())
     LOG ("CHECKER ignoring satisfied original clause");
-  else add_clause ("original");
+  else add_clause (id, "original");
   simplified.clear ();
   unsimplified.clear ();
   STOP (checking);
 }
 
-void Checker::add_derived_clause (int64_t, const vector<int64_t> *, const vector<int> & c) {
+void Checker::add_derived_clause (int64_t id, const vector<int64_t> * chain, const vector<int> & c) {
   if (inconsistent) return;
   START (checking);
   LOG (c, "CHECKER addition of derived clause");
@@ -483,14 +516,27 @@ void Checker::add_derived_clause (int64_t, const vector<int64_t> *, const vector
   import_clause (c);
   if (tautological ())
     LOG ("CHECKER ignoring satisfied derived clause");
-  else if (!check ()) {
+  else if (!check (chain)) {
     internal->fatal_message_start ();
     fputs ("failed to check derived clause:\n", stderr);
     for (const auto & lit : unsimplified)
       fprintf (stderr, "%d ", lit);
     fputc ('0', stderr);
+    if (chain) {
+      fputs ("\nchain:\n", stderr);
+      for (const auto & cid : *chain) {
+        fprintf (stderr, "%ld: ",cid);
+        auto c = find_id (cid);
+        if (!*c) { fprintf (stderr, "not found\n"); continue; }
+        int size = (*c)->size;
+        int * lits = (*c)->literals;
+        for (int k = 0; k < size; k++)
+          fprintf (stderr, "%d ", lits[k]);
+        fprintf (stderr, "0\n");
+      }
+    }
     internal->fatal_message_end ();
-  } else add_clause ("derived");
+  } else add_clause (id, "derived");
   simplified.clear ();
   unsimplified.clear ();
   STOP (checking);
@@ -498,14 +544,14 @@ void Checker::add_derived_clause (int64_t, const vector<int64_t> *, const vector
 
 /*------------------------------------------------------------------------*/
 
-void Checker::delete_clause (int64_t, const vector<int> & c) {
+void Checker::delete_clause (int64_t id, const vector<int> & c) {
   if (inconsistent) return;
   START (checking);
   LOG (c, "CHECKER checking deletion of clause");
   stats.deleted++;
   import_clause (c);
   if (!tautological ()) {
-    CheckerClause ** p = find (), * d = *p;
+    CheckerClause ** p = find (id), * d = *p;
     if (d) {
       assert (d->size > 1);
       // Remove from hash table, mark as garbage, connect to garbage list.

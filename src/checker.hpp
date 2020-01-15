@@ -96,17 +96,18 @@ class Checker : public Observer {
 
   uint64_t nonces[num_nonces];  // random numbers for hashing
   uint64_t last_hash;           // last computed hash value of clause
-  uint64_t compute_hash ();     // compute and save hash value of clause
+  uint64_t compute_hash (int64_t); // compute and save hash value of clause
 
   // Reduce hash value to the actual size.
   //
   static uint64_t reduce_hash (uint64_t hash, uint64_t size);
 
   void enlarge_clauses ();      // enlarge hash table for clauses
-  void insert ();               // insert clause in hash table
-  CheckerClause ** find ();     // find clause position in hash table
+  void insert (int64_t);        // insert clause in hash table
+  CheckerClause ** find (int64_t); // find clause position in hash table
+  CheckerClause ** find_id (int64_t); // find clause position in hash table
 
-  void add_clause (const char * type);
+  void add_clause (int64_t id, const char * type);
 
   void collect_garbage_clauses ();
 
@@ -120,8 +121,9 @@ class Checker : public Observer {
   void assign (int lit);        // assign a literal to true
   void assume (int lit);        // assume a literal
   bool propagate ();            // propagate and check for conflicts
+  bool propagate_chain (const vector<int64_t>*); // propagate and check for conflicts
   void backtrack (unsigned);    // prepare for next clause
-  bool check ();                // check simplified clause is implied
+  bool check (const vector<int64_t>*); // check simplified clause is implied
 
   struct {
 
