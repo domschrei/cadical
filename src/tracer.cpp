@@ -33,28 +33,24 @@ inline void Tracer::put_binary_lit (int lit) {
   assert (binary);
   assert (file);
   assert (lit != INT_MIN);
-  unsigned x = 2*abs (lit) + (lit < 0);
-  unsigned char ch;
-  while (x & ~0x7f) {
-    ch = (x & 0x7f) | 0x80;
-    file->put (ch);
-    x >>= 7;
-  }
-  ch = x;
-  file->put (ch);
+  put_binary_signed (lit);
 }
 
-inline void Tracer::put_binary_clause_id (int64_t c) {
+inline void Tracer::put_binary_signed (int64_t n) {
+  put_binary_unsigned (2*abs (n) + (n < 0));
+}
+
+inline void Tracer::put_binary_unsigned (int64_t n) {
   assert (binary);
   assert (file);
-  assert (c > 0);
+  assert (n > 0);
   unsigned char ch;
-  while (c & ~0x7f) {
-    ch = (c & 0x7f) | 0x80;
+  while (n & ~0x7f) {
+    ch = (n & 0x7f) | 0x80;
     file->put (ch);
-    c >>= 7;
+    n >>= 7;
   }
-  ch = c;
+  ch = n;
   file->put (ch);
 }
 
@@ -67,7 +63,7 @@ void Tracer::add_original_clause (int64_t id, const vector<int> & clause) {
   if (binary) file->put ('o');
   else if (lrat) file->put ("o ");
   if (lrat) {
-    if (binary) put_binary_clause_id (id);
+    if (binary) put_binary_unsigned (id);
     else file->put (id), file->put ("  ");
   }
   for (const auto & external_lit : clause)
@@ -83,7 +79,7 @@ void Tracer::add_derived_clause (int64_t id, const vector<int64_t> * chain, cons
   if (binary) file->put ('a');
   else if (lrat) file->put ("a ");
   if (lrat) {
-    if (binary) put_binary_clause_id (id);
+    if (binary) put_binary_unsigned (id);
     else file->put (id), file->put ("  ");
   }
   for (const auto & external_lit : clause)
@@ -93,7 +89,7 @@ void Tracer::add_derived_clause (int64_t id, const vector<int64_t> * chain, cons
     if (binary) put_binary_zero (), file->put ('l');
     else file->put ("0  l ");
     for (const auto & c : *chain)
-      if (binary) put_binary_clause_id (c);
+      if (binary) put_binary_signed (c);
       else file->put (c), file->put (' ');
   }
   if (binary) put_binary_zero ();
@@ -107,7 +103,7 @@ void Tracer::delete_clause (int64_t id, const vector<int> & clause) {
   if (binary) file->put ('d');
   else file->put ("d ");
   if (lrat) {
-    if (binary) put_binary_clause_id (id);
+    if (binary) put_binary_unsigned (id);
     else file->put (id), file->put ("  ");
   }
   for (const auto & external_lit : clause)
@@ -124,7 +120,7 @@ void Tracer::finalize_clause (int64_t id, const vector<int> & clause) {
   LOG ("TRACER tracing finalized clause");
   if (binary) file->put ('f');
   else file->put ("f ");
-  if (binary) put_binary_clause_id (id);
+  if (binary) put_binary_unsigned (id);
   else file->put (id), file->put ("  ");
   for (const auto & external_lit : clause)
     if (binary) put_binary_lit (external_lit);
@@ -142,7 +138,7 @@ void Tracer::add_todo (const vector<int64_t> & vals) {
   if (binary) file->put ('t');
   else file->put ("t ");
   for (const auto & val : vals)
-    if (binary) put_binary_clause_id (val);
+    if (binary) put_binary_unsigned (val);
     else file->put (val), file->put (' ');
   if (binary) put_binary_zero ();
   else file->put ("0\n");

@@ -13,7 +13,8 @@ class Tracer : public Observer {
   bool binary, lrat;
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
-  void put_binary_clause_id (int64_t clause);
+  void put_binary_unsigned (int64_t n);
+  void put_binary_signed (int64_t n);
   int64_t added, deleted;
 public:
 
