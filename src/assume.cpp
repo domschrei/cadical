@@ -145,12 +145,11 @@ void Internal::failing () {
   // a unit-implied clause.
   //
   external->check_learned_clause ();
-  // Note(Mario): These are unnecessary for the proof, so remove
-  // int64_t id = ++clause_id;
-  // if (proof) {
-  //   proof->add_derived_clause (id, clause);
-  //   proof->delete_clause (id, clause);
-  // }
+  int64_t id = ++clause_id;
+  if (proof) {
+    proof->add_derived_clause (id, clause);
+    proof->delete_clause (id, clause);
+  }
   clause.clear ();
 
   STOP (analyze);
