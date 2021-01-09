@@ -237,7 +237,7 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
         assert (binary_subsuming.size == 2);
         assert (!binary_subsuming.redundant);
         d = &binary_subsuming;
-        chain = {c->id, bin.clause_id};
+        if (flipped != INT_MIN) chain = {c->id, bin.clause_id};
         break;
       }
 

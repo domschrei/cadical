@@ -504,6 +504,7 @@ void Internal::vivify_strengthen (Clause * c) {
     assert (!val (unit));
     assign_unit (unit);
     stats.vivifyunits++;
+    clause.clear ();
 
     bool ok = propagate ();
     if (!ok) learn_empty_clause ();
@@ -545,8 +546,8 @@ void Internal::vivify_strengthen (Clause * c) {
     LOG (c, "before vivification");
     LOG (d, "after vivification");
     (void) d;
+    clause.clear ();
   }
-  clause.clear ();
   mark_garbage (c);
 }
 
