@@ -263,21 +263,17 @@ void Internal::import_redundant_clauses (int& res) {
         int ilit = external->internalize(elit);
 
         auto& f = flags (ilit);
-        if (f.eliminated () || f.substituted ()) {
-          // Do not import clauses with eliminated or substituted literals
+        if (f.eliminated ()) {
+          // Literal has been eliminated: do not add this clause.
           addClause = false; break;
-        }
-        // See if the literal already has a fixed value.
-        if (f.fixed ()) {
-          assert(val (ilit) != 0);
-          if (val (ilit) == -1) {
-            // FALSE: Literal can be omitted.
-          } else if (val (ilit) == 1) {
+        } else if (f.fixed ()) {
+          // Literal is fixed
+          if (val (ilit) == 1) {
             // TRUE: Clause can be omitted.
             addClause = false; break;
-          }
+          } // else: FALSE - literal can be omitted.
         } else {
-          // Literal is unassigned.
+          // Active, pure, or substituted: Can treat literal normally.
           clause.push_back (ilit);
           unitLit = elit;
         }
