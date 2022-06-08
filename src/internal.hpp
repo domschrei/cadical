@@ -145,7 +145,10 @@ struct Internal {
   size_t vsize;                 // actually allocated variable data size
   int max_var;                  // internal maximum variable index
   int level;                    // decision level ('control.size () - 1')
-  int64_t clause_id;            // last assigned clause ID
+  clause_id_t original_count;   // count of original clauses
+  clause_id_t learned_count;    // count of learned clauses
+  int total_instances = 1;      // total number of instances running
+  int instance_num = 1;         // which of those instances this is
   signed char * vals;           // assignment [-max_var,max_var]
   vector<signed char> marks;    // signed marks [1,max_var]
   Phases phases;                // saved, target and best phases
@@ -181,7 +184,7 @@ struct Internal {
   vector<int> analyzed;         // analyzed literals in 'analyze'
   vector<int> minimized;        // removable or poison in 'minimize'
   vector<int> probes;           // remaining scheduled probes
-  vector<int64_t> chain;        // clause IDs for derivation chain
+  vector<clause_id_t> chain;    // clause IDs for derivation chain
   vector<Level> control;        // 'level + 1 == control.size ()'
   vector<Clause*> clauses;      // ordered collection of all clauses
   Averages averages;            // glue, size, jump moving averages
@@ -223,6 +226,23 @@ struct Internal {
   void init_scores (int old_max_var, int new_max_var);
 
   void add_original_lit (int lit);
+
+  // Get the next clause ID for a clause read from the input file.
+  // Using this ensures all instances will use the same ID for each
+  // original clause.
+  //
+  clause_id_t next_original_clause_id ();
+
+  // When we finish reading a file, meaning we have all the original
+  // clauses, we need to shift the clause_id so the rest of the clauses
+  // are offset across instances.
+  //
+  void post_original_clause_id_update ();
+
+  // Get the next clause ID for a generated clause in this solver.
+  // Should not be used for original clauses.
+  //
+  clause_id_t next_clause_id ();
 
   // Enlarge tables.
   //
@@ -465,14 +485,14 @@ struct Internal {
   // Managing clauses in 'clause.cpp'.  Without explicit 'Clause' argument
   // these functions work on the global temporary 'clause'.
   //
-  Clause * new_clause (int64_t id, bool red, int glue = 0);
+  Clause * new_clause (clause_id_t id, bool red, int glue = 0);
   void promote_clause (Clause *, int new_glue);
   size_t shrink_clause (Clause *, int new_size);
   void deallocate_clause (Clause *);
   void delete_clause (Clause *);
   void mark_garbage (Clause *);
-  void assign_original_unit (int64_t, int);
-  void add_new_original_clause (int64_t);
+  void assign_original_unit (clause_id_t, int);
+  void add_new_original_clause (clause_id_t);
   Clause * new_learned_redundant_clause (int glue);
   Clause * new_hyper_binary_resolved_clause (bool red, int glue);
   Clause * new_clause_as (const Clause * orig);

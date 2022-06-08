@@ -56,7 +56,7 @@ inline void Tracer::put_binary_unsigned (int64_t n) {
 
 /*------------------------------------------------------------------------*/
 
-void Tracer::add_original_clause (int64_t id, const vector<int> & clause) {
+void Tracer::add_original_clause (clause_id_t id, const vector<int> & clause) {
   if (!lrat) return;
   if (file->closed ()) return;
   LOG ("TRACER tracing addition of original clause");
@@ -73,7 +73,7 @@ void Tracer::add_original_clause (int64_t id, const vector<int> & clause) {
   else file->put ("0\n");
 }
 
-void Tracer::add_derived_clause (int64_t id, const vector<int64_t> * chain, const vector<int> & clause) {
+void Tracer::add_derived_clause (clause_id_t id, const vector<int64_t> * chain, const vector<int> & clause) {
   if (file->closed ()) return;
   LOG ("TRACER tracing addition of derived clause");
   if (binary) file->put ('a');
@@ -97,7 +97,7 @@ void Tracer::add_derived_clause (int64_t id, const vector<int64_t> * chain, cons
   added++;
 }
 
-void Tracer::delete_clause (int64_t id, const vector<int> & clause) {
+void Tracer::delete_clause (clause_id_t id, const vector<int> & clause) {
   if (file->closed ()) return;
   LOG ("TRACER tracing deletion of clause");
   if (binary) file->put ('d');
@@ -114,7 +114,7 @@ void Tracer::delete_clause (int64_t id, const vector<int> & clause) {
   deleted++;
 }
 
-void Tracer::finalize_clause (int64_t id, const vector<int> & clause) {
+void Tracer::finalize_clause (clause_id_t id, const vector<int> & clause) {
   if (!lrat) return;
   if (file->closed ()) return;
   LOG ("TRACER tracing finalized clause");

@@ -82,6 +82,11 @@ bool is_no_color_option (const char * arg); // --no-color, --no-colour, ...
 
 /*------------------------------------------------------------------------*/
 
+// To allow us to easily change the definition of clause identifiers
+typedef int64_t clause_id_t;
+
+/*------------------------------------------------------------------------*/
+
 }
 
 #endif

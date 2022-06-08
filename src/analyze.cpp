@@ -15,7 +15,7 @@ namespace CaDiCaL {
 
 void Internal::learn_empty_clause () {
   assert (!unsat), assert (clause.empty ());
-  int64_t id = ++clause_id;
+  clause_id_t id = next_clause_id();
   LOG ("learned empty clause [%ld]", id);
   external->check_learned_empty_clause ();
   if (proof) {
@@ -26,7 +26,7 @@ void Internal::learn_empty_clause () {
 }
 
 void Internal::learn_unit_clause (int lit) {
-  int64_t id = ++clause_id;
+  clause_id_t id = next_clause_id();
   external->check_learned_unit_clause (lit);
   if (proof) {
     var (lit).unit_id = id;

@@ -80,6 +80,9 @@ void App::print_usage (bool all) {
 #endif
 "\n"
 "  -t <sec>       set wall clock time limit\n"
+"\n"
+"  --instance-num=int      unique identifier of this instance\n"
+"  --total-instances=int   total number of running instances\n"
 ,
   all ? " (same as '--no-witness')": ""
 #ifndef QUIET
@@ -234,6 +237,18 @@ int App::main (int argc, char ** argv) {
     } else if (!strcmp (argv[i], "--version")) {
       printf ("%s\n", CaDiCaL::version ());
       return 0;
+    } else if (!strcmp (argv[i], "--instance-num")) {
+      int instance_num = 0;
+      if (++i == argc) APPERR ("argument to '--instance-num' missing");
+      else if (!parse_int_str (argv[i], instance_num))
+          APPERR ("invalid argument in '--instance-num %s'", argv[i]);
+      solver->set_instance_num(instance_num);
+    } else if (!strcmp (argv[i], "--total-instances")) {
+      int total_instances = 0;
+      if (++i == argc) APPERR ("argument to '--total-instances' missing");
+      else if (!parse_int_str (argv[i], total_instances))
+        APPERR ("invalid argument in '--total-instances %s'", argv[i]);
+      solver->set_total_instances(total_instances);
     } else if (!strcmp (argv[i], "--build")) {
       tout.disable ();
       Solver::build (stdout, "");
@@ -528,6 +543,7 @@ int App::main (int argc, char ** argv) {
     close (1);
     pclose (less_pipe);
   }
+
   return res;
 }
 

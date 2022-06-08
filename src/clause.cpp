@@ -68,7 +68,7 @@ void Internal::mark_added (Clause * c) {
 
 /*------------------------------------------------------------------------*/
 
-Clause * Internal::new_clause (int64_t id, bool red, int glue) {
+Clause * Internal::new_clause (clause_id_t id, bool red, int glue) {
 
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();
@@ -87,7 +87,8 @@ Clause * Internal::new_clause (int64_t id, bool red, int glue) {
   Clause * c = (Clause *) new char[bytes];
 
   stats.added.total++;
-  c->id = id ? id : ++clause_id;
+  //To allow multiple instances, we step each use
+  c->id = id ? id : next_clause_id();
 
   c->conditioned = false;
   c->covered = false;
@@ -284,7 +285,7 @@ void Internal::mark_garbage (Clause * c) {
 // Almost the same function as 'search_assign' except that we do not pretend
 // to learn a new unit clause (which was confusing in log files).
 
-void Internal::assign_original_unit (int64_t id, int lit) {
+void Internal::assign_original_unit (clause_id_t id, int lit) {
   assert (!level);
   const int idx = vidx (lit);
   assert (!vals[idx]);
@@ -307,7 +308,7 @@ void Internal::assign_original_unit (int64_t id, int lit) {
 
 // New clause added through the API, e.g., while parsing a DIMACS file.
 //
-void Internal::add_new_original_clause (int64_t id) {
+void Internal::add_new_original_clause (clause_id_t id) {
   if (level) backtrack ();
   LOG (original, "original clause");
   bool skip = false;
@@ -344,7 +345,7 @@ void Internal::add_new_original_clause (int64_t id) {
     if (proof) proof->delete_clause (id, original);
   } else {
     size_t size = clause.size ();
-    int64_t cid = original.size () > size ? ++clause_id : id;
+    clause_id_t cid = original.size () > size ? next_clause_id() : id;
     if (!size) {
       if (!unsat) {
         if (!original.size ()) {
@@ -354,7 +355,7 @@ void Internal::add_new_original_clause (int64_t id) {
           if (opts.lrat) {
             chain.clear ();
             for (const auto & lit : original) {
-              int64_t uid = var (lit).unit_id;
+              clause_id_t uid = var (lit).unit_id;
               assert (uid);
               chain.push_back (uid);
             }

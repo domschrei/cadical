@@ -23,7 +23,7 @@ struct Var {
   };
 
   // ID of the unit clause corresponding to this variable
-  int64_t unit_id;
+  clause_id_t unit_id;
 };
 
 }

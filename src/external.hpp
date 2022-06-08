@@ -47,12 +47,12 @@ struct External {
 
   /*----------------------------------------------------------------------*/
 
-  Internal * internal;      // The actual internal solver.
-  int max_var;              // External maximum variable index.
+  Internal * internal;          // The actual internal solver.
+  int max_var;                  // External maximum variable index.
   size_t vsize;
-  vector<bool> vals;        // Current external (extended) assignment.
-  vector<int64_t> unit_id;  // Unit clause ids for external assignment.
-  vector<int> e2i;          // External 'idx' to internal 'lit' [1,max_var].
+  vector<bool> vals;            // Current external (extended) assignment.
+  vector<clause_id_t> unit_id;  // Unit clause ids for external assignment.
+  vector<int> e2i;              // External 'idx' to internal 'lit' [1,max_var].
 
   vector<int> assumptions;      // External assumptions.
 
@@ -138,7 +138,7 @@ struct External {
     if (ulit < map.size ()) map[ulit] = false;
   }
 
-  void set_unit_id (unsigned eidx, int64_t id) {
+  void set_unit_id (unsigned eidx, clause_id_t id) {
     assert (eidx <= (unsigned) max_var);
     while (unit_id.size () <= eidx)
       unit_id.push_back (0);

@@ -167,11 +167,27 @@ void Internal::add_original_lit (int lit) {
   if (lit) {
     original.push_back (lit);
   } else {
-    int64_t id = ++clause_id;
+    // to keep all the original clauses the same across all, they get
+    // the basic clause ID
+    clause_id_t id = next_original_clause_id();
     if (proof) proof->add_original_clause (id, original);
     add_new_original_clause (id);
     original.clear ();
   }
+}
+
+/*------------------------------------------------------------------------*/
+
+clause_id_t Internal::next_original_clause_id () {
+  return ++original_count;
+}
+
+void Internal::post_original_clause_id_update () {
+  // we don't need anything here under the current scheme
+}
+
+clause_id_t Internal::next_clause_id () {
+  return original_count + instance_num + total_instances * learned_count++;
 }
 
 /*------------------------------------------------------------------------*/
@@ -611,7 +627,7 @@ void Internal::finalize () {
   if (!proof || !opts.lrat) return;
   LOG ("finalizing");
   for (unsigned eidx = 1; eidx < external->unit_id.size(); eidx++) {
-    int64_t id = external->unit_id[eidx];
+    clause_id_t id = external->unit_id[eidx];
     if (!id) continue;
     int idx = external->e2i[eidx];
     int lit = idx ? eidx * val (idx) :

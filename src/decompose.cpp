@@ -276,7 +276,7 @@ bool Internal::decompose_round () {
       LOG ("simply shrinking clause since watches did not change");
       assert (c->size > 2);
       if (!c->redundant) mark_removed (c);
-      int64_t id = ++clause_id;
+      clause_id_t id = next_clause_id();
       if (proof) {
         // for (const_literal_iterator i = c->begin (); i != c->end (); i++) {
         //   int id = var (*i).unit_id;

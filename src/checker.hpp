@@ -107,7 +107,7 @@ class Checker : public Observer {
   CheckerClause ** find (int64_t); // find clause position in hash table
   CheckerClause ** find_id (int64_t); // find clause position in hash table
 
-  void add_clause (int64_t id, const char * type);
+  void add_clause (clause_id_t id, const char * type);
 
   void collect_garbage_clauses ();
 
@@ -154,9 +154,9 @@ public:
 
   // The following three implement the 'Observer' interface.
   //
-  void add_original_clause (int64_t, const vector<int> &);
-  void add_derived_clause (int64_t, const vector<int64_t> *, const vector<int> &);
-  void delete_clause (int64_t, const vector<int> &);
+  void add_original_clause (clause_id_t, const vector<int> &);
+  void add_derived_clause (clause_id_t, const vector<clause_id_t> *, const vector<int> &);
+  void delete_clause (clause_id_t, const vector<int> &);
 
   void print_stats ();
 };

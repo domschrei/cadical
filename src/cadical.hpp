@@ -384,6 +384,23 @@ public:
   //
   bool set_long_option (const char * arg);
 
+  // Set the total number of instances running in the distributed solver.
+  //
+  // require (CONFIGURING)
+  // ensure (CONFIGURING)
+  //
+  void set_total_instances (int val);
+
+  // Set which instance this is of the total instances running.  This
+  // must be unique across the different instances running, and must be
+  // nonzero.  The numbers across all the instances should cover the
+  // range 1..total_instances.
+  //
+  // require (CONFIGURING)
+  // ensure (CONFIGURING)
+  //
+  void set_instance_num (int val);
+
   // Determine whether 'name' is a valid configuration.
   //
   static bool is_valid_configuration (const char *);

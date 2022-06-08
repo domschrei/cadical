@@ -21,10 +21,10 @@ public:
   Tracer (Internal *, File * file, bool binary, bool lrat); // own and delete 'file'
   ~Tracer ();
 
-  void add_original_clause (int64_t, const vector<int> &);
-  void add_derived_clause (int64_t, const vector<int64_t> *, const vector<int> &);
-  void delete_clause (int64_t, const vector<int> &);
-  void finalize_clause (int64_t, const vector<int> &);
+  void add_original_clause (clause_id_t, const vector<int> &);
+  void add_derived_clause (clause_id_t, const vector<clause_id_t> *, const vector<int> &);
+  void delete_clause (clause_id_t, const vector<int> &);
+  void finalize_clause (clause_id_t, const vector<int> &);
   void add_todo (const vector<int64_t> &);
   bool closed ();
   void close ();

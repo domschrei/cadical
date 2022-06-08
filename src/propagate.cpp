@@ -68,7 +68,7 @@ inline void Internal::search_assign (int lit, Clause * reason) {
       for (const_literal_iterator l = reason->begin (); l != reason->end (); l++) {
         const int lit2 = *l;
         if (lit2 == lit) continue;
-        int64_t id = var (lit2).unit_id;
+        clause_id_t id = var (lit2).unit_id;
         assert (id);
         chain.push_back (id);
       }

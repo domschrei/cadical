@@ -74,19 +74,19 @@ inline void Proof::add_literals (const vector<int> & c) {
 
 /*------------------------------------------------------------------------*/
 
-void Proof::add_original_clause (int64_t id, const vector<int> & c) {
+void Proof::add_original_clause (clause_id_t id, const vector<int> & c) {
   LOG (c, "PROOF adding original internal clause [%ld]", id);
   add_literals (c);
   add_original_clause (id);
 }
 
-void Proof::add_derived_empty_clause (int64_t id) {
+void Proof::add_derived_empty_clause (clause_id_t id) {
   LOG ("PROOF adding empty clause [%ld]", id);
   assert (clause.empty ());
   add_derived_clause (id);
 }
 
-void Proof::add_derived_unit_clause (int64_t id, int internal_unit) {
+void Proof::add_derived_unit_clause (clause_id_t id, int internal_unit) {
   LOG ("PROOF adding unit clause [%ld] %d", id, internal_unit);
   assert (clause.empty ());
   add_literal (internal_unit);
@@ -102,7 +102,7 @@ void Proof::add_derived_clause (Clause * c) {
   add_derived_clause (c->id);
 }
 
-void Proof::add_derived_clause (int64_t id, const vector<int> & c) {
+void Proof::add_derived_clause (clause_id_t id, const vector<int> & c) {
   LOG (internal->clause, "PROOF adding derived clause [%ld]", id);
   assert (clause.empty ());
   for (const auto & lit : c)
@@ -117,7 +117,7 @@ void Proof::delete_clause (Clause * c) {
   delete_clause (c->id);
 }
 
-void Proof::delete_clause (int64_t id, const vector<int> & c) {
+void Proof::delete_clause (clause_id_t id, const vector<int> & c) {
   LOG (c, "PROOF deleting from proof [%ld]", id);
   assert (clause.empty ());
   add_literals (c);
@@ -132,7 +132,7 @@ void Proof::finalize_clause (Clause * c) {
   finalize_clause (c->id);
 }
 
-void Proof::finalize_clause (int64_t id, const vector<int> & c) {
+void Proof::finalize_clause (clause_id_t id, const vector<int> & c) {
   if (!internal->opts.lrat) return;
   LOG (c, "PROOF finalizing [%ld]", id);
   assert (clause.empty ());
@@ -140,7 +140,7 @@ void Proof::finalize_clause (int64_t id, const vector<int> & c) {
   finalize_clause (id);
 }
 
-void Proof::finalize_clause_ext (int64_t id, const vector<int> & c) {
+void Proof::finalize_clause_ext (clause_id_t id, const vector<int> & c) {
   clause = c;
   finalize_clause (id);
 }
@@ -169,7 +169,7 @@ void Proof::flush_clause (Clause * c) {
     add_literal (internal_lit);
   }
   internal->chain.push_back(c->id);
-  int64_t id = ++internal->clause_id;
+  clause_id_t id = internal->next_clause_id();
   add_derived_clause (id);
   delete_clause (c);
   c->id = id;
@@ -189,7 +189,7 @@ void Proof::strengthen_clause (Clause * c, int remove) {
     if (internal_lit == remove) continue;
     add_literal (internal_lit);
   }
-  int64_t id = ++internal->clause_id;
+  clause_id_t id = internal->next_clause_id();
   add_derived_clause (id);
   delete_clause (c);
   c->id = id;
@@ -197,30 +197,30 @@ void Proof::strengthen_clause (Clause * c, int remove) {
 
 /*------------------------------------------------------------------------*/
 
-void Proof::add_original_clause (int64_t id) {
+void Proof::add_original_clause (clause_id_t id) {
   LOG (clause, "PROOF adding original external clause");
   for (size_t i = 0; i < observers.size (); i++)
     observers[i]->add_original_clause (id, clause);
   clause.clear ();
 }
 
-void Proof::add_derived_clause (int64_t id) {
+void Proof::add_derived_clause (clause_id_t id) {
   LOG (clause, "PROOF adding derived external clause");
-  vector<int64_t> * chain = internal->chain.empty () ? 0 : &internal->chain;
+  vector<clause_id_t> * chain = internal->chain.empty () ? 0 : &internal->chain;
   for (size_t i = 0; i < observers.size (); i++)
     observers[i]->add_derived_clause (id, chain, clause);
   internal->chain.clear ();
   clause.clear ();
 }
 
-void Proof::delete_clause (int64_t id) {
+void Proof::delete_clause (clause_id_t id) {
   LOG (clause, "PROOF deleting external clause");
   for (size_t i = 0; i < observers.size (); i++)
     observers[i]->delete_clause (id, clause);
   clause.clear ();
 }
 
-void Proof::finalize_clause (int64_t id) {
+void Proof::finalize_clause (clause_id_t id) {
   if (!internal->opts.lrat) return;
   LOG (clause, "PROOF finalizing external clause [%ld]", id);
   for (size_t i = 0; i < observers.size (); i++)
