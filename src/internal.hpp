@@ -231,18 +231,24 @@ struct Internal {
   // Using this ensures all instances will use the same ID for each
   // original clause.
   //
-  clause_id_t next_original_clause_id ();
+  inline clause_id_t next_original_clause_id () {
+    return ++original_count;
+  }
 
   // When we finish reading a file, meaning we have all the original
-  // clauses, we need to shift the clause_id so the rest of the clauses
-  // are offset across instances.
+  // clauses, we might need to do some processing to prepare for the
+  // learned clauses
   //
-  void post_original_clause_id_update ();
+  inline void post_original_clause_id_update (){
+    // we don't need anything here under the current scheme
+  }
 
   // Get the next clause ID for a generated clause in this solver.
   // Should not be used for original clauses.
   //
-  clause_id_t next_clause_id ();
+  clause_id_t next_clause_id () {
+    return original_count + instance_num + total_instances * learned_count++;
+  }
 
   // Enlarge tables.
   //

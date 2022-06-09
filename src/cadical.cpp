@@ -81,8 +81,8 @@ void App::print_usage (bool all) {
 "\n"
 "  -t <sec>       set wall clock time limit\n"
 "\n"
-"  --instance-num=int      unique identifier of this instance\n"
-"  --total-instances=int   total number of running instances\n"
+"  --instance-num <int>      unique identifier of this instance\n"
+"  --total-instances <int>   total number of running instances\n"
 ,
   all ? " (same as '--no-witness')": ""
 #ifndef QUIET

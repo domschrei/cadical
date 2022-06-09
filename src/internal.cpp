@@ -178,20 +178,6 @@ void Internal::add_original_lit (int lit) {
 
 /*------------------------------------------------------------------------*/
 
-clause_id_t Internal::next_original_clause_id () {
-  return ++original_count;
-}
-
-void Internal::post_original_clause_id_update () {
-  // we don't need anything here under the current scheme
-}
-
-clause_id_t Internal::next_clause_id () {
-  return original_count + instance_num + total_instances * learned_count++;
-}
-
-/*------------------------------------------------------------------------*/
-
 // This is the main CDCL loop with interleaved inprocessing.
 
 int Internal::cdcl_loop_with_inprocessing () {
