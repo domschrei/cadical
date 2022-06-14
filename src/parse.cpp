@@ -143,6 +143,8 @@ const char * Parser::parse_dimacs_non_profiled (int & vars, int strict) {
     }
   }
 
+  solver->internal->total_originals = clauses;
+
   MSG ("found %s'p cnf %d %d'%s header",
     tout.green_code (), vars, clauses, tout.normal_code ());
 

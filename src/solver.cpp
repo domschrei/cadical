@@ -841,7 +841,6 @@ const char * Solver::read_dimacs (File * file, int & vars, int strict) {
   Parser * parser = new Parser (this, file);
   const char * err = parser->parse_dimacs (vars, strict);
   delete parser;
-  internal->post_original_clause_id_update();
   return err;
 }
 
@@ -856,7 +855,6 @@ Solver::read_dimacs (FILE * external_file,
   assert (file);
   const char * err = read_dimacs (file, vars, strict);
   delete file;
-  internal->post_original_clause_id_update();
   LOG_API_CALL_RETURNS ("read_dimacs", name, err);
   return err;
 }
@@ -873,7 +871,6 @@ Solver::read_dimacs (const char * path, int & vars, int strict) {
              "failed to read DIMACS file '%s'", path);
   const char * err = read_dimacs (file, vars, strict);
   delete file;
-  internal->post_original_clause_id_update();
   LOG_API_CALL_RETURNS ("read_dimacs", path, err);
   return err;
 }
