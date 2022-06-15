@@ -8,6 +8,7 @@
 namespace CaDiCaL {
 
 class Tracer : public Observer {
+
   Internal * internal;
   File * file;
   bool binary, lrat;
@@ -16,6 +17,7 @@ class Tracer : public Observer {
   void put_binary_unsigned (int64_t n);
   void put_binary_signed (int64_t n);
   int64_t added, deleted;
+
 public:
 
   Tracer (Internal *, File * file, bool binary, bool lrat); // own and delete 'file'

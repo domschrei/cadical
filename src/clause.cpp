@@ -83,7 +83,7 @@ Clause * Internal::new_clause (clause_id_t id, bool red, int glue) {
   else if (glue <= opts.reducetier1glue) keep = true;
   else keep = false;
 
-  size_t bytes = sizeof (Clause) + (size - 2) * sizeof (int);
+  size_t bytes = Clause::bytes (size);
   Clause * c = (Clause *) new char[bytes];
 
   stats.added.total++;
@@ -132,7 +132,7 @@ Clause * Internal::new_clause (clause_id_t id, bool red, int glue) {
   }
 
   clauses.push_back (c);
-  LOG (c, "new");
+  LOG (c, "new pointer %p", (void*) c);
 
   if (likely_to_be_kept_clause (c)) mark_added (c);
 
@@ -210,12 +210,12 @@ size_t Internal::shrink_clause (Clause * c, int new_size) {
 void Internal::deallocate_clause (Clause * c) {
   char * p = (char*) c;
   if (arena.contains (p)) return;
-  LOG (c, "deallocate");
+  LOG (c, "deallocate pointer %p", (void*) c);
   delete [] p;
 }
 
 void Internal::delete_clause (Clause * c) {
-  LOG (c, "delete");
+  LOG (c, "delete pointer %p", (void*) c);
   size_t bytes = c->bytes ();
   stats.collected += bytes;
   if (c->garbage) {
@@ -253,6 +253,7 @@ void Internal::delete_clause (Clause * c) {
 // 'check_clause_stats' after garbage collection in debugging mode.
 //
 void Internal::mark_garbage (Clause * c) {
+
   assert (!c->garbage);
 
   // Delay tracing deletion of binary clauses.  See the discussion above in
@@ -278,6 +279,8 @@ void Internal::mark_garbage (Clause * c) {
   stats.garbage += bytes;
   c->garbage = true;
   c->used = 0;
+
+  LOG (c, "marked garbage pointer %p", (void*) c);
 }
 
 /*------------------------------------------------------------------------*/
@@ -304,6 +307,9 @@ void Internal::assign_original_unit (clause_id_t id, int lit) {
   trail.push_back (lit);
   LOG ("original unit assign %d", lit);
   mark_fixed (lit);
+  if (propagate ()) return;
+  LOG ("propagation of original unit results in conflict");
+  learn_empty_clause ();
 }
 
 // New clause added through the API, e.g., while parsing a DIMACS file.

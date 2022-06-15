@@ -355,7 +355,7 @@ bool Internal::cover_clause (Clause * c, Coveror & coveror) {
       stats.cover.total++;
       LOG (c, "asymmetric tautological");
       mark_garbage (c);
-    } else if (tautological) {
+    } else {
       stats.cover.blocked++;
       stats.cover.total++;
       LOG (c, "covered tautological");
@@ -481,7 +481,7 @@ int64_t Internal::cover_round () {
 #ifndef QUIET
   const size_t scheduled = schedule.size ();
   PHASE ("cover", stats.cover.count,
-    "scheduled %zd clauses %.0f%% with %zd untried %.0f%%",
+    "scheduled %zd clauses %.0f%% with %" PRId64 " untried %.0f%%",
     scheduled, percent (scheduled, stats.current.irredundant),
     untried, percent (untried, scheduled));
 #endif
@@ -490,20 +490,17 @@ int64_t Internal::cover_round () {
   // first, since then the chances are higher that the intersection of
   // resolution candidates becomes emptier earlier.
 
-  for (int idx = 1; idx <= max_var; idx++) {
-    if (!active (idx)) continue;
-    for (int sign = -1; sign <= 1; sign += 2) {
-      const int lit = sign * idx;
-      Occs & os = occs (lit);
-      stable_sort (os.begin (), os.end (), clause_smaller_size ());
-    }
+  for (auto lit : lits) {
+    if (!active (lit)) continue;
+    Occs & os = occs (lit);
+    stable_sort (os.begin (), os.end (), clause_smaller_size ());
   }
 
   // This is the main loop of trying to do CCE of candidate clauses.
   //
   int64_t covered = 0;
   //
-  while (!terminating () &&
+  while (!terminated_asynchronously () &&
          !schedule.empty () &&
          stats.propagations.cover < limit) {
     Clause * c = schedule.back ();
@@ -520,7 +517,7 @@ int64_t Internal::cover_round () {
     covered, tried, percent (covered, tried));
   if (remain)
     PHASE ("cover", stats.cover.count,
-      "remaining %" PRId64 " clauses %.0f%% untried",
+      "remaining %zu clauses %.0f%% untried",
       remain, percent (remain, scheduled));
   else
     PHASE ("cover", stats.cover.count,
@@ -537,7 +534,9 @@ int64_t Internal::cover_round () {
 bool Internal::cover () {
 
   if (!opts.cover) return false;
-  if (unsat || terminating () || !stats.current.irredundant) return false;
+  if (unsat) return false;
+  if (terminated_asynchronously ()) return false;
+  if (!stats.current.irredundant) return false;
 
   // TODO: Our current algorithm for producing the necessary clauses on the
   // reconstruction stack for extending the witness requires a covered
@@ -566,7 +565,8 @@ bool Internal::cover () {
   if (propagated < trail.size ()) {
     init_watches ();
     connect_watches ();         // need to propagated over all clauses!
-    LOG ("elimination produced %" PRId64 " units", trail.size () - propagated);
+    LOG ("elimination produced %zd units",
+         (size_t)(trail.size () - propagated));
     if (!propagate ()) {
       LOG ("propagating units before covered clause elimination "
         "results in empty clause");

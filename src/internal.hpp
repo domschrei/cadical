@@ -73,6 +73,7 @@ extern "C" {
 #include "queue.hpp"
 #include "radix.hpp"
 #include "random.hpp"
+#include "range.hpp"
 #include "reluctant.hpp"
 #include "resources.hpp"
 #include "score.hpp"
@@ -84,6 +85,7 @@ extern "C" {
 #include "version.hpp"
 #include "vivify.hpp"
 #include "watch.hpp"
+#include "reap.hpp"
 
 /*------------------------------------------------------------------------*/
 
@@ -94,6 +96,11 @@ using namespace std;
 struct Coveror;
 struct External;
 struct Walker;
+
+struct CubesWithStatus {
+  int status;
+  std::vector<std::vector<int>> cubes;
+};
 
 /*------------------------------------------------------------------------*/
 
@@ -122,8 +129,6 @@ struct Internal {
     WALK     = (1<<14),
   };
 
-  int mode;
-
   bool in_mode (Mode m) const { return (mode & m) != 0; }
   void set_mode (Mode m) { assert (!(mode & m)); mode |= m; }
   void reset_mode (Mode m) { assert (mode & m); mode &= ~m; }
@@ -131,12 +136,14 @@ struct Internal {
 
   /*----------------------------------------------------------------------*/
 
+  int mode;                     // current internal state
   bool unsat;                   // empty clause found or learned
   bool iterating;               // report learned unit ('i' line)
   bool localsearching;          // true during local search
+  bool lookingahead;            // true during look ahead
   bool preprocessing;           // true during preprocessing
+  bool protected_reasons;       // referenced reasons are protected
   bool force_saved_phase;       // force saved phase in decision
-  bool termination_forced;      // forced to terminate
   bool searching_lucky_phases;  // during 'lucky_phases'
   bool stable;                  // true during stabilization phase
   bool reported;                // reported in this solving call
@@ -150,24 +157,24 @@ struct Internal {
   clause_id_t learned_count;    // count of learned clauses
   int total_instances = 1;      // total number of instances running
   int instance_num = 1;         // which of those instances this is
+  Phases phases;                // saved, target and best phases
   signed char * vals;           // assignment [-max_var,max_var]
   vector<signed char> marks;    // signed marks [1,max_var]
-  Phases phases;                // saved, target and best phases
   vector<unsigned> frozentab;   // frozen counters [1,max_var]
-  vector<int> i2e;              // maps internal idx to external lit
+  vector<int> i2e;              // maps internal 'idx' to external 'lit'
   Queue queue;                  // variable move to front decision queue
-  double scinc;                 // current score increment
+  Links links;                  // table of links for decision queue
+  double score_inc;             // current score increment
   ScoreSchedule scores;         // score based decision priority queue
   vector<double> stab;          // table of variable scores [1,max_var]
   vector<Var> vtab;             // variable table [1,max_var]
-  Links links;                  // table of links for decision queue
+  vector<int> parents;          // parent literals during probing
   vector<Flags> ftab;           // variable and literal flags
   vector<int64_t> btab;         // enqueue time stamps for queue
   vector<int64_t> gtab;         // time stamp table to recompute glue
   vector<Occs> otab;            // table of occurrences for all literals
   vector<int> ptab;             // table for caching probing attempts
   vector<int64_t> ntab;         // number of one-sided occurrences table
-  vector<int64_t> ntab2;        // number of two-sided occurrences table
   vector<Bins> big;             // binary implication graph
   vector<Watches> wtab;         // table of watches for all literals
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
@@ -184,6 +191,9 @@ struct Internal {
   vector<int> levels;           // decision levels in learned clause
   vector<int> analyzed;         // analyzed literals in 'analyze'
   vector<int> minimized;        // removable or poison in 'minimize'
+  vector<int> shrinkable;       // removable or poison in 'shrink'
+  Reap reap;                    // radix heap for shrink
+
   vector<int> probes;           // remaining scheduled probes
   vector<clause_id_t> chain;    // clause IDs for derivation chain
   vector<Level> control;        // 'level + 1 == control.size ()'
@@ -203,11 +213,22 @@ struct Internal {
 #endif
   Arena arena;                  // memory arena for moving garbage collector
   Format error_message;         // provide persistent error message
-  Clause binary_subsuming;      // communicate binary subsuming clause
   string prefix;                // verbose messages prefix
 
   Internal * internal;          // proxy to 'this' in macros
   External * external;          // proxy to 'external' buddy in 'Solver'
+
+  /*----------------------------------------------------------------------*/
+
+  // Asynchronous termination flag written by 'terminate' and read by
+  // 'terminated_asynchronously' (the latter at the end of this header).
+  //
+  volatile bool termination_forced;
+
+  /*----------------------------------------------------------------------*/
+
+  const Range vars;             // Provides safe variable iteration.
+  const Sange lits;             // Provides safe literal iteration.
 
   /*----------------------------------------------------------------------*/
 
@@ -217,13 +238,14 @@ struct Internal {
   /*----------------------------------------------------------------------*/
 
   // Internal delegates and helpers for corresponding functions in
-  // 'External' and 'Solver'.  The 'init' function initializes variables up
-  // to and including the requested variable index.
+  // 'External' and 'Solver'.  The 'init_vars' function initializes
+  // variables up to and including the requested variable index.
   //
-  void init (int new_max_var);
+  void init_vars (int new_max_var);
 
   void init_enqueue (int idx);
   void init_queue (int old_max_var, int new_max_var);
+
   void init_scores (int old_max_var, int new_max_var);
 
   void add_original_lit (int lit);
@@ -287,7 +309,8 @@ struct Internal {
   //
   int vidx (int lit) const {
     int idx;
-    assert (lit), assert (lit != INT_MIN);
+    assert (lit);
+    assert (lit != INT_MIN);
     idx = abs (lit);
     assert (idx <= max_var);
     return idx;
@@ -309,31 +332,30 @@ struct Internal {
 
   // Helper functions to access variable and literal data.
   //
-  Var & var (int lit)         { return vtab[vidx (lit)]; }
-  Link & link (int lit)       { return links[vidx (lit)]; }
-  Flags & flags (int lit)     { return ftab[vidx (lit)]; }
+  Var & var (int lit)        { return vtab[vidx (lit)]; }
+  Link & link (int lit)      { return links[vidx (lit)]; }
+  Flags & flags (int lit)    { return ftab[vidx (lit)]; }
   int64_t & bumped (int lit) { return btab[vidx (lit)]; }
-  int & propfixed (int lit)   { return ptab[vlit (lit)]; }
-  double & score (int lit)    { return stab[vidx (lit)]; }
+  int & propfixed (int lit)  { return ptab[vlit (lit)]; }
+  double & score (int lit)   { return stab[vidx (lit)]; }
 
-  const Flags & flags (int lit) const { return ftab[vidx (lit)]; }
+  const Flags &
+  flags (int lit) const       { return ftab[vidx (lit)]; }
 
-  bool occurring () const { return !otab.empty (); }
-  bool watching () const { return !wtab.empty (); }
+  bool occurring () const     { return !otab.empty (); }
+  bool watching () const      { return !wtab.empty (); }
 
-  Bins & bins (int lit) { assert (!big.empty ()); return big[vlit (lit)]; }
-  Occs & occs (int lit) { assert (!otab.empty ()); return otab[vlit (lit)]; }
-  int64_t & noccs (int lit) { assert (!ntab.empty ()); return ntab[vlit (lit)]; }
-  int64_t & noccs2 (int lit) { assert (!ntab2.empty ()); return ntab2[vidx (lit)]; }
-  Watches & watches (int lit) { assert (!wtab.empty ()); return wtab[vlit (lit)]; }
+  Bins & bins (int lit)       { return big[vlit (lit)]; }
+  Occs & occs (int lit)       { return otab[vlit (lit)]; }
+  int64_t & noccs (int lit)   { return ntab[vlit (lit)]; }
+  Watches & watches (int lit) { return wtab[vlit (lit)]; }
 
-  // Variable bumping (through exponential VSIDS).
+  // Variable bumping through exponential VSIDS (EVSIDS) as in MiniSAT.
   //
   bool use_scores () const { return opts.score && stable; }
-
-  void bump_score (int lit);
-  void bump_scinc ();
-  void rescore ();
+  void bump_variable_score (int lit);
+  void bump_variable_score_inc ();
+  void rescale_variable_scores ();
 
   // Marking variables with a sign (positive or negative).
   //
@@ -464,7 +486,8 @@ struct Internal {
   // inlined here since it occurs in several inner loops.
   //
   inline void update_queue_unassigned (int idx) {
-    assert (0 < idx), assert (idx <= max_var);
+    assert (0 < idx);
+    assert (idx <= max_var);
     queue.unassigned = idx;
     queue.bumped = btab[idx];
     LOG ("queue unassigned now %d bumped %" PRId64 "", idx, btab[idx]);
@@ -487,7 +510,22 @@ struct Internal {
   Clause * new_clause (clause_id_t id, bool red, int glue = 0);
   void promote_clause (Clause *, int new_glue);
   size_t shrink_clause (Clause *, int new_size);
-  void deallocate_clause (Clause *);
+  void minimize_sort_clause();
+  void shrink_and_minimize_clause ();
+  void reset_shrinkable();
+  void mark_shrinkable_as_removable(int, std::vector<int>::size_type);
+  int shrink_literal(int, int, unsigned);
+  unsigned shrunken_block_uip(int, int, std::vector<int>::reverse_iterator &,
+                              std::vector<int>::reverse_iterator &,
+                              std::vector<int>::size_type, const int);
+  void shrunken_block_no_uip(const std::vector<int>::reverse_iterator&, const std::vector<int>::reverse_iterator&, unsigned&, const int);
+  void push_literals_of_block(const std::vector<int>::reverse_iterator&, const std::vector<int>::reverse_iterator&, int, unsigned);
+  unsigned shrink_next(unsigned&, unsigned&);
+  std::vector<int>::reverse_iterator minimize_and_shrink_block(std::vector<int>::reverse_iterator&, unsigned int&, unsigned int&, const int);
+  unsigned shrink_block(std::vector<int>::reverse_iterator&, std::vector<int>::reverse_iterator&, int, unsigned&, unsigned&, const int, unsigned);
+  unsigned shrink_along_reason(int, int, bool, bool&, unsigned);
+
+  void deallocate_clause(Clause *);
   void delete_clause (Clause *);
   void mark_garbage (Clause *);
   void assign_original_unit (clause_id_t, int);
@@ -554,8 +592,8 @@ struct Internal {
 
   // Functions to set and reset certain 'phases'.
   //
-  void clear_phases (vector<signed char> &);  // reset to zero
-  void copy_phases (vector<signed char> &);   // copy 'vals' to 'argument'
+  void clear_phases (vector<signed char> &);  // reset argument to zero
+  void copy_phases (vector<signed char> &);   // copy 'saved' to argument
 
   // Resetting the saved phased in 'rephase.cpp'.
   //
@@ -572,6 +610,7 @@ struct Internal {
 
   // Lucky feasible case checking.
   //
+  int unlucky (int res);
   int trivially_false_satisfiable ();
   int trivially_true_satisfiable ();
   int forward_false_satisfiable ();
@@ -583,9 +622,14 @@ struct Internal {
 
   // Asynchronous terminating check.
   //
-  bool terminating ();                        // check 'clim', 'dlim' too
+  bool terminated_asynchronously (int factor = 1);
 
-  void terminate () { termination_forced = true; }
+  bool search_limits_hit ();
+
+  void terminate () {
+    LOG ("forcing asynchronous termination");
+    termination_forced = true;
+  }
 
   // Reducing means determining useless clauses with 'reduce' in
   // 'reduce.cpp' as well as root level satisfied clause and then removing
@@ -610,6 +654,7 @@ struct Internal {
   void flush_watches (int lit, Watches &);
   size_t flush_occs (int lit);
   void flush_all_occs_and_watches ();
+  void update_reason_references ();
   void copy_non_garbage_clauses ();
   void delete_garbage_clauses ();
   void check_clause_stats ();
@@ -622,18 +667,17 @@ struct Internal {
   void init_occs ();
   void init_bins ();
   void init_noccs ();
-  void init_watches ();
-  void clear_watches ();
   void reset_occs ();
   void reset_bins ();
   void reset_noccs ();
-  void reset_watches ();
 
   // Operators on watches.
   //
-  void sort_watches ();
+  void init_watches ();
   void connect_watches (bool irredundant_only = false);
-  void disconnect_watches ();
+  void sort_watches ();
+  void clear_watches ();
+  void reset_watches ();
 
   // Regular forward subsumption checking in 'subsume.cpp'.
   //
@@ -721,267 +765,298 @@ struct Internal {
   void mark_added (int lit, int size, bool redundant);
   void mark_added (Clause *);
 
-  bool marked_subsume (int lit) const { return flags (lit).subsume; }
+  bool marked_subsume(int lit) const { return flags(lit).subsume; }
 
-  // If irredundant clauses are removed or literals in clauses are removed,
-  // then variables in such clauses should be reconsidered to be eliminated
-  // through bounded variable elimination.  In contrast to 'subsume' the
-  // 'elim' flag is restricted to 'irredundant' clauses only. For blocked
-  // clause elimination it is better to have a more precise signed version,
-  // which allows to independently mark positive and negative literals.
-  //
-  void mark_elim (int lit) {
-    Flags & f = flags (lit);
-    if (f.elim) return;
-    LOG ("marking %d as elimination literal candidate", lit);
-    stats.mark.elim++;
-    f.elim = true;
-  }
-  void mark_block (int lit) {
-    Flags & f = flags (lit);
-    const unsigned bit = bign (lit);
-    if (f.block & bit) return;
-    LOG ("marking %d as blocking literal candidate", lit);
-    stats.mark.block++;
-    f.block |= bit;
-  }
-  void mark_removed (int lit) {
-    mark_elim (lit);
-    mark_block (-lit);
-  }
-  void mark_removed (Clause *, int except = 0);
+    // If irredundant clauses are removed or literals in clauses are removed,
+    // then variables in such clauses should be reconsidered to be eliminated
+    // through bounded variable elimination.  In contrast to 'subsume' the
+    // 'elim' flag is restricted to 'irredundant' clauses only. For blocked
+    // clause elimination it is better to have a more precise signed version,
+    // which allows to independently mark positive and negative literals.
+    //
+    void mark_elim(int lit) {
+      Flags &f = flags(lit);
+      if (f.elim)
+        return;
+      LOG("marking %d as elimination literal candidate", lit);
+      stats.mark.elim++;
+      f.elim = true;
+    }
+    void mark_block(int lit) {
+      Flags &f = flags(lit);
+      const unsigned bit = bign(lit);
+      if (f.block & bit)
+        return;
+      LOG("marking %d as blocking literal candidate", lit);
+      stats.mark.block++;
+      f.block |= bit;
+    }
+    void mark_removed(int lit) {
+      mark_elim(lit);
+      mark_block(-lit);
+    }
+    void mark_removed(Clause *, int except = 0);
 
-  // The following two functions are only used for testing & debugging.
+    // The following two functions are only used for testing & debugging.
 
-  bool marked_block (int lit) const {
-    const Flags & f = flags (lit);
-    const unsigned bit = bign (lit);
-    return (f.block & bit) != 0;
-  }
-  void unmark_block (int lit) {
-    Flags & f = flags (lit);
-    const unsigned bit = bign (lit);
-    f.block &= ~bit;
-  }
+    bool marked_block(int lit) const {
+      const Flags &f = flags(lit);
+      const unsigned bit = bign(lit);
+      return (f.block & bit) != 0;
+    }
+    void unmark_block(int lit) {
+      Flags &f = flags(lit);
+      const unsigned bit = bign(lit);
+      f.block &= ~bit;
+    }
 
-  // During scheduling literals for blocked clause elimination we skip those
-  // literals which occur negated in a too large clause.
-  //
-  void mark_skip (int lit) {
-    Flags & f = flags (lit);
-    const unsigned bit = bign (lit);
-    if (f.skip & bit) return;
-    LOG ("marking %d to be skipped as blocking literal", lit);
-    f.skip |= bit;
-  }
-  bool marked_skip (int lit) {
-    const Flags & f = flags (lit);
-    const unsigned bit = bign (lit);
-    return (f.skip & bit) != 0;
-  }
+    // During scheduling literals for blocked clause elimination we skip those
+    // literals which occur negated in a too large clause.
+    //
+    void mark_skip(int lit) {
+      Flags &f = flags(lit);
+      const unsigned bit = bign(lit);
+      if (f.skip & bit)
+        return;
+      LOG("marking %d to be skipped as blocking literal", lit);
+      f.skip |= bit;
+    }
+    bool marked_skip(int lit) {
+      const Flags &f = flags(lit);
+      const unsigned bit = bign(lit);
+      return (f.skip & bit) != 0;
+    }
 
-  // Blocked Clause elimination in 'block.cpp'.
-  //
-  bool is_blocked_clause (Clause *c, int pivot);
-  void block_schedule (Blocker &);
-  size_t block_candidates (Blocker &, int lit);
-  Clause * block_impossible (Blocker &, int lit);
-  void block_literal_with_at_least_two_negative_occs (Blocker &, int lit);
-  void block_literal_with_one_negative_occ (Blocker &, int lit);
-  void block_pure_literal (Blocker &, int lit);
-  void block_reschedule_clause (Blocker &, int lit, Clause *);
-  void block_reschedule (Blocker &, int lit);
-  void block_literal (Blocker &, int lit);
-  bool block ();
+    // Blocked Clause elimination in 'block.cpp'.
+    //
+    bool is_blocked_clause(Clause * c, int pivot);
+    void block_schedule(Blocker &);
+    size_t block_candidates(Blocker &, int lit);
+    Clause *block_impossible(Blocker &, int lit);
+    void block_literal_with_at_least_two_negative_occs(Blocker &, int lit);
+    void block_literal_with_one_negative_occ(Blocker &, int lit);
+    void block_pure_literal(Blocker &, int lit);
+    void block_reschedule_clause(Blocker &, int lit, Clause *);
+    void block_reschedule(Blocker &, int lit);
+    void block_literal(Blocker &, int lit);
+    bool block();
 
-  // Find gates in 'gates.cpp' for bounded variable substitution.
-  //
-  int second_literal_in_binary_clause (Eliminator &, Clause *, int first);
-  void mark_binary_literals (Eliminator &, int pivot);
-  void find_and_gate (Eliminator &, int pivot);
-  void find_equivalence (Eliminator &, int pivot);
+    // Find gates in 'gates.cpp' for bounded variable substitution.
+    //
+    int second_literal_in_binary_clause(Eliminator &, Clause *, int first);
+    void mark_binary_literals(Eliminator &, int pivot);
+    void find_and_gate(Eliminator &, int pivot);
+    void find_equivalence(Eliminator &, int pivot);
 
-  bool get_ternary_clause (Clause *, int &, int &, int &);
-  bool match_ternary_clause (Clause *, int, int, int);
-  Clause * find_ternary_clause (int, int, int);
+    bool get_ternary_clause(Clause *, int &, int &, int &);
+    bool match_ternary_clause(Clause *, int, int, int);
+    Clause *find_ternary_clause(int, int, int);
 
-  bool get_clause (Clause *, vector<int> &);
-  bool is_clause (Clause *, const vector<int> &);
-  Clause * find_clause (const vector<int> &);
-  void find_xor_gate (Eliminator &, int pivot);
+    bool get_clause(Clause *, vector<int> &);
+    bool is_clause(Clause *, const vector<int> &);
+    Clause *find_clause(const vector<int> &);
+    void find_xor_gate(Eliminator &, int pivot);
 
-  void find_if_then_else (Eliminator &, int pivot);
+    void find_if_then_else(Eliminator &, int pivot);
 
-  void find_gate_clauses (Eliminator &, int pivot);
-  void unmark_gate_clauses (Eliminator &);
+    void find_gate_clauses(Eliminator &, int pivot);
+    void unmark_gate_clauses(Eliminator &);
 
-  // Bounded variable elimination in 'elim.cpp'.
-  //
-  bool eliminating ();
-  double compute_elim_score (unsigned lit);
-  void mark_redundant_clauses_with_eliminated_variables_as_garbage ();
-  void unmark_binary_literals (Eliminator &);
-  bool resolve_clauses (Eliminator &, Clause *, int pivot, Clause *);
-  void mark_eliminated_clauses_as_garbage (Eliminator &, int pivot);
-  bool elim_resolvents_are_bounded (Eliminator &, int pivot);
-  void elim_update_removed_lit (Eliminator &, int lit);
-  void elim_update_removed_clause (Eliminator &, Clause *, int except = 0);
-  void elim_update_added_clause (Eliminator &, Clause *);
-  void elim_add_resolvents (Eliminator &, int pivot);
-  void elim_backward_clause (Eliminator &, Clause *);
-  void elim_backward_clauses (Eliminator &);
-  void elim_propagate (Eliminator &, int unit);
-  void elim_on_the_fly_self_subsumption (Eliminator &, Clause *, int);
-  void try_to_eliminate_variable (Eliminator &, int pivot);
-  void increase_elimination_bound ();
-  bool elim_round ();
-  void elim (bool update_limits = true);
+    // Bounded variable elimination in 'elim.cpp'.
+    //
+    bool eliminating();
+    double compute_elim_score(unsigned lit);
+    void mark_redundant_clauses_with_eliminated_variables_as_garbage();
+    void unmark_binary_literals(Eliminator &);
+    bool resolve_clauses(Eliminator &, Clause *, int pivot, Clause *, bool);
+    void mark_eliminated_clauses_as_garbage(Eliminator &, int pivot);
+    bool elim_resolvents_are_bounded(Eliminator &, int pivot);
+    void elim_update_removed_lit(Eliminator &, int lit);
+    void elim_update_removed_clause(Eliminator &, Clause *, int except = 0);
+    void elim_update_added_clause(Eliminator &, Clause *);
+    void elim_add_resolvents(Eliminator &, int pivot);
+    void elim_backward_clause(Eliminator &, Clause *);
+    void elim_backward_clauses(Eliminator &);
+    void elim_propagate(Eliminator &, int unit);
+    void elim_on_the_fly_self_subsumption(Eliminator &, Clause *, int);
+    void try_to_eliminate_variable(Eliminator &, int pivot);
+    void increase_elimination_bound();
+    int elim_round(bool &completed);
+    void elim(bool update_limits = true);
 
-  void inst_assign (int lit);
-  bool inst_propagate ();
-  void collect_instantiation_candidates (Instantiator &);
-  bool instantiate_candidate (int lit, Clause *);
-  void instantiate (Instantiator &);
+    void inst_assign(int lit);
+    bool inst_propagate();
+    void collect_instantiation_candidates(Instantiator &);
+    bool instantiate_candidate(int lit, Clause *);
+    void instantiate(Instantiator &);
 
-  // Hyper ternary resolution.
-  //
-  bool ternary_find_binary_clause (int, int);
-  bool ternary_find_ternary_clause (int, int, int);
-  Clause * new_hyper_ternary_resolved_clause (bool red);
-  bool hyper_ternary_resolve (Clause *, int, Clause *);
-  void ternary_lit (int pivot, int64_t & steps, int64_t & htrs);
-  void ternary_idx (int idx, int64_t & steps, int64_t & htrs);
-  bool ternary_round (int64_t & steps, int64_t & htrs);
-  bool ternary ();
+    // Hyper ternary resolution.
+    //
+    bool ternary_find_binary_clause(int, int);
+    bool ternary_find_ternary_clause(int, int, int);
+    Clause *new_hyper_ternary_resolved_clause(bool red);
+    bool hyper_ternary_resolve(Clause *, int, Clause *);
+    void ternary_lit(int pivot, int64_t &steps, int64_t &htrs);
+    void ternary_idx(int idx, int64_t &steps, int64_t &htrs);
+    bool ternary_round(int64_t & steps, int64_t & htrs);
+    bool ternary();
 
-  // Probing in 'probe.cpp'.
-  //
-  bool probing ();
-  void failed_literal (int lit);
-  void probe_assign_unit (int lit);
-  void probe_assign_decision (int lit);
-  void probe_assign (int lit, int parent);
-  void mark_duplicated_binary_clauses_as_garbage ();
-  int probe_dominator (int a, int b);
-  int hyper_binary_resolve (Clause*);
-  void probe_propagate2 ();
-  bool probe_propagate ();
-  bool is_binary_clause (Clause * c, int &, int &);
-  void generate_probes ();
-  void flush_probes ();
-  int next_probe ();
-  bool probe_round ();
-  void probe (bool update_limits = true);
+    // Probing in 'probe.cpp'.
+    //
+    bool probing();
+    void failed_literal(int lit);
+    void probe_assign_unit(int lit);
+    void probe_assign_decision(int lit);
+    void probe_assign(int lit, int parent);
+    void mark_duplicated_binary_clauses_as_garbage();
+    int get_parent_reason_literal(int lit);
+    void set_parent_reason_literal(int lit, int reason);
+    int probe_dominator(int a, int b);
+    int hyper_binary_resolve(Clause *);
+    void probe_propagate2();
+    bool probe_propagate();
+    bool is_binary_clause(Clause * c, int &, int &);
+    void generate_probes();
+    void flush_probes();
+    int next_probe();
+    bool probe_round();
+    void probe(bool update_limits = true);
 
-  // ProbSAT/WalkSAT implementation called initially or from 'rephase'.
-  //
-  void walk_save_minimum (Walker &);
-  Clause * walk_pick_clause (Walker &);
-  unsigned walk_break_value (int lit);
-  int walk_pick_lit (Walker &, Clause *);
-  void walk_flip_lit (Walker &, int lit);
-  int walk_round (int64_t limit, bool prev);
-  void walk ();
+    // ProbSAT/WalkSAT implementation called initially or from 'rephase'.
+    //
+    void walk_save_minimum(Walker &);
+    Clause *walk_pick_clause(Walker &);
+    unsigned walk_break_value(int lit);
+    int walk_pick_lit(Walker &, Clause *);
+    void walk_flip_lit(Walker &, int lit);
+    int walk_round(int64_t limit, bool prev);
+    void walk();
 
-  // Detect strongly connected components in the binary implication graph
-  // (BIG) and equivalent literal substitution (ELS) in 'decompose.cpp'.
-  //
-  bool decompose_round ();
-  void decompose ();
+    // Detect strongly connected components in the binary implication graph
+    // (BIG) and equivalent literal substitution (ELS) in 'decompose.cpp'.
+    //
+    bool decompose_round();
+    void decompose();
 
-  // Assumption handling.
-  //
-  void assume (int);                    // New assumption literal.
-  void reset_assumptions ();            // Reset after 'solve' call.
-  void reset_limits ();                 // Reset after 'solve' call.
-  void failing ();                      // Prepare failed assumptions.
+    // Assumption handling.
+    //
+    void assume(int);         // New assumption literal.
+    void reset_assumptions(); // Reset after 'solve' call.
+    void reset_limits();      // Reset after 'solve' call.
+    void failing();           // Prepare failed assumptions.
 
-  bool failed (int lit) {               // Literal failed assumption?
-    Flags & f = flags (lit);
-    const unsigned bit = bign (lit);
-    return (f.failed & bit) != 0;
-  }
+    bool failed(int lit) { // Literal failed assumption?
+      Flags &f = flags(lit);
+      const unsigned bit = bign(lit);
+      return (f.failed & bit) != 0;
+    }
 
-  bool assumed (int lit) {              // Marked as assumption.
-    Flags & f = flags (lit);
-    const unsigned bit = bign (lit);
-    return (f.assumed & bit) != 0;
-  }
+    bool assumed(int lit) { // Marked as assumption.
+      Flags &f = flags(lit);
+      const unsigned bit = bign(lit);
+      return (f.assumed & bit) != 0;
+    }
 
-  // Globally blocked clause elimination.
-  //
-  bool is_autarky_literal (int lit) const;
-  bool is_conditional_literal (int lit) const;
-  void mark_as_conditional_literal (int lit);
-  void unmark_as_conditional_literal (int lit);
-  //
-  bool is_in_candidate_clause (int lit) const;
-  void mark_in_candidate_clause (int lit);
-  void unmark_in_candidate_clause (int lit);
-  //
-  void condition_assign (int lit);
-  void condition_unassign (int lit);
-  //
-  bool conditioning ();
-  long condition_round (long unassigned_literal_propagation_limit);
-  void condition (bool update_limits = true);
+    // Import learnt clauses from an external source.
+    bool importing ();
+    void import_redundant_clauses (int& res);
 
-  // Part on picking the next decision in 'decide.cpp'.
-  //
-  bool satisfied ();
-  int next_decision_variable_on_queue ();
-  int next_decision_variable_with_best_score ();
-  int next_decision_variable ();
-  int decide_phase (int idx, bool target);
-  int likely_phase (int idx);
-  int decide ();                        // 0=decision, 20=failed
+    // Forcing decision variables to a certain phase.
+    //
+    void phase(int lit);
+    void unphase(int lit);
 
-  // Internal functions to enable explicit search limits.
-  //
-  void limit_decisions (int);           // Force decision limit.
-  void limit_conflicts (int);           // Force conflict limit.
-  void limit_preprocessing (int);       // Enable 'n' preprocessing rounds.
-  void limit_local_search (int);        // Enable 'n' local search rounds.
+    // Globally blocked clause elimination.
+    //
+    bool is_autarky_literal(int lit) const;
+    bool is_conditional_literal(int lit) const;
+    void mark_as_conditional_literal(int lit);
+    void unmark_as_conditional_literal(int lit);
+    //
+    bool is_in_candidate_clause(int lit) const;
+    void mark_in_candidate_clause(int lit);
+    void unmark_in_candidate_clause(int lit);
+    //
+    void condition_assign(int lit);
+    void condition_unassign(int lit);
+    //
+    bool conditioning();
+    long condition_round(long unassigned_literal_propagation_limit);
+    void condition(bool update_limits = true);
 
-  // External versions can access limits by 'name'.
-  //
-  static bool is_valid_limit (const char *name);
-  bool limit (const char * name, int);  // 'true' if 'name' valid
+    // Part on picking the next decision in 'decide.cpp'.
+    //
+    bool satisfied();
+    int next_decision_variable_on_queue();
+    int next_decision_variable_with_best_score();
+    int next_decision_variable();
+    int decide_phase(int idx, bool target);
+    int likely_phase(int idx);
+    int decide(); // 0=decision, 20=failed
 
-  // Set all the CDCL search limits and increments for scheduling
-  // inprocessing, restarts, clause database reductions, etc.
-  //
-  void init_limits ();
+    // Internal functions to enable explicit search limits.
+    //
+    void limit_terminate(int);
+    void limit_decisions(int);     // Force decision limit.
+    void limit_conflicts(int);     // Force conflict limit.
+    void limit_preprocessing(int); // Enable 'n' preprocessing rounds.
+    void limit_local_search(int);  // Enable 'n' local search rounds.
 
-  // The computed averages are local to the 'stable' and 'unstable' phase.
-  // Their main use is to be reported in 'report', except for the 'glue'
-  // averages, which are used to schedule (prohibit actually) restarts
-  // during 'unstable' phases ('stable' phases use reluctant doubling).
-  //
-  void init_averages ();
-  void swap_averages ();
+    // External versions can access limits by 'name'.
+    //
+    static bool is_valid_limit(const char *name);
+    bool limit(const char *name, int); // 'true' if 'name' valid
 
-  int try_to_satisfy_formula_by_saved_phases ();
-  void produce_failed_assumptions ();
+    // Set all the CDCL search limits and increments for scheduling
+    // inprocessing, restarts, clause database reductions, etc.
+    //
+    void init_report_limits();
+    void init_preprocessing_limits();
+    void init_search_limits();
 
-  // Main solve & search functions in 'internal.cpp'.
-  //
-  // We have three pre-solving techniques.  These consist of preprocessing,
-  // local search and searching for lucky phases, which except for the last
-  // are usually optional and then followed by the main CDCL search loop
-  // with inprocessing.  This is all orchestrated by the 'solve' function.
-  //
-  bool preprocess_round (int round);
-  int preprocess ();
-  //
-  int local_search_round (int round);
-  int local_search ();
-  //
-  int lucky_phases ();
-  //
-  int cdcl_loop_with_inprocessing ();
-  //
-  int solve ();         // Orchestrates the three functions above.
+    // The computed averages are local to the 'stable' and 'unstable' phase.
+    // Their main use is to be reported in 'report', except for the 'glue'
+    // averages, which are used to schedule (prohibit actually) restarts
+    // during 'unstable' phases ('stable' phases use reluctant doubling).
+    //
+    void init_averages();
+    void swap_averages();
+
+    int try_to_satisfy_formula_by_saved_phases();
+    void produce_failed_assumptions();
+
+    // Main solve & search functions in 'internal.cpp'.
+    //
+    // We have three pre-solving techniques.  These consist of preprocessing,
+    // local search and searching for lucky phases, which in full solving
+    // mode except for the last are usually optional and then followed by
+    // the main CDCL search loop with inprocessing.  If only preprocessing
+    // is requested from 'External::simplifiy' only preprocessing is called
+    // though. This is all orchestrated by the 'solve' function.
+    //
+    int already_solved();
+    int restore_clauses();
+    bool preprocess_round(int round);
+    int preprocess();
+    int local_search_round(int round);
+    int local_search();
+    int lucky_phases();
+    int cdcl_loop_with_inprocessing();
+    void reset_solving();
+    int solve(bool preprocess_only = false);
+
+    //
+    int lookahead();
+    CubesWithStatus generate_cubes(int, int);
+    int most_occurring_literal();
+    int lookahead_probing();
+    int lookahead_next_probe();
+    void lookahead_flush_probes();
+    void lookahead_generate_probes();
+    std::vector<int> lookahead_populate_locc();
+    int lookahead_locc(const std::vector<int> &);
+
+    bool terminating_asked();
 
   void finalize ();
 
@@ -1002,7 +1077,9 @@ struct Internal {
   // negative.  We also avoid taking the absolute value.
   //
   signed char val (int lit) const {
-    assert (-max_var <= lit), assert (lit), assert (lit <= max_var);
+    assert (-max_var <= lit);
+    assert (lit);
+    assert (lit <= max_var);
     return vals[lit];
   }
 
@@ -1011,8 +1088,11 @@ struct Internal {
   // of the variable anyhow.
   //
   int fixed (int lit) {
-    assert (-max_var <= lit), assert (lit), assert (lit <= max_var);
-    int idx = vidx (lit), res = vals[idx];
+    assert (-max_var <= lit);
+    assert (lit);
+    assert (lit <= max_var);
+    const int idx = vidx (lit);
+    int res = vals[idx];
     if (res && vtab[idx].level) res = 0;
     if (lit < 0) res = -res;
     return res;
@@ -1023,7 +1103,8 @@ struct Internal {
   int externalize (int lit) {
     assert (lit != INT_MIN);
     const int idx = abs (lit);
-    assert (idx), assert (idx <= max_var);
+    assert (idx);
+    assert (idx <= max_var);
     int res = i2e[idx];
     if (lit < 0) res = -res;
     return res;
@@ -1089,8 +1170,10 @@ struct Internal {
   // Regularly reports what is going on in 'report.cpp'.
   //
   void report (char type, int verbose_level = 0);
+  void report_solving(int);
 
-  void print_stats ();          // Complete statistics.
+  void print_statistics ();
+  void print_resource_usage ();
 
   /*----------------------------------------------------------------------*/
 
@@ -1104,14 +1187,16 @@ struct Internal {
   // such messages completely at compile-time.
   //
   void vmessage (const char *, va_list &);
-  void message (const char *, ...);
+  void message (const char *, ...)
+                CADICAL_ATTRIBUTE_FORMAT (2, 3);
   void message ();                              // empty line
 
   // Verbose messages with explicit verbose 'level' controlled by
   // 'opts.verbose' (verbose level '0' gives the same as 'message').
   //
   void vverbose (int level, const char * fmt, va_list &);
-  void verbose (int level, const char * fmt, ...);
+  void verbose (int level, const char * fmt, ...)
+                CADICAL_ATTRIBUTE_FORMAT (3, 4);
   void verbose (int level);
 
   // This is for printing section headers in the form
@@ -1129,13 +1214,15 @@ struct Internal {
   //
   //  c [<phase>] ...
   //
-  void phase (const char * phase, const char *, ...);
+  void phase (const char * phase, const char *, ...)
+              CADICAL_ATTRIBUTE_FORMAT (3, 4);
 
   // Same as the last 'phase' above except that the prefix gets a count:
   //
   //  c [<phase>-<count>] ...
   //
-  void phase (const char * phase, int64_t count, const char *, ...);
+  void phase (const char * phase, int64_t count, const char *, ...)
+              CADICAL_ATTRIBUTE_FORMAT (4, 5);
 #endif
 
   // Print error messages which are really always printed (even if 'quiet'
@@ -1145,32 +1232,36 @@ struct Internal {
   //
   void error_message_end ();
   void verror (const char *, va_list &);
-  void error (const char *, ...);
+  void error (const char *, ...)
+              CADICAL_ATTRIBUTE_FORMAT (2, 3);
   void error_message_start ();
-
-  // Fatal internal error which leads to abort.
-  //
-  void fatal (const char *, ...);
 
   // Warning messages.
   //
-  void warning (const char *, ...);
+  void warning (const char *, ...)
+                CADICAL_ATTRIBUTE_FORMAT (2, 3);
+  };
 
-  static void fatal_message_start ();
-  void fatal_message_end ();
-};
+// Fatal internal error which leads to abort.
+//
+void fatal_message_start ();
+void fatal_message_end ();
+void fatal (const char *, ...)
+            CADICAL_ATTRIBUTE_FORMAT (1, 2);
 
 /*------------------------------------------------------------------------*/
 
 // Has to be put here, i.e., not into 'score.hpp', since we need the
-// definition of 'Internal::score' above (after '#include "score.hpp").
+// definition of 'Internal::score' above (after '#include "score.hpp"').
 
 inline bool score_smaller::operator () (unsigned a, unsigned b) {
 
   // Avoid computing twice 'abs' in 'score ()'.
   //
-  assert (1 <= a), assert (a <= (unsigned) internal->max_var);
-  assert (1 <= b), assert (b <= (unsigned) internal->max_var);
+  assert (1 <= a);
+  assert (a <= (unsigned) internal->max_var);
+  assert (1 <= b);
+  assert (b <= (unsigned) internal->max_var);
   double s = internal->stab[a];
   double t = internal->stab[b];
 
@@ -1194,6 +1285,91 @@ inline int External::fixed (int elit) const {
   if (elit < 0) ilit = -ilit;
   return internal->fixed (ilit);
 }
+
+/*------------------------------------------------------------------------*/
+
+// We want to have termination checks inlined, particularly the first
+// function which appears in preprocessor loops.  Even though this first
+// 'termination_forced' is set asynchronously, this should not lead to a
+// data race issue (it also has been declared 'volatile').
+
+inline bool Internal::terminated_asynchronously (int factor)
+{
+  // First way of asynchronous termination is through 'terminate' which sets
+  // the 'termination_forced' flag directly.  The second way is through a
+  // call back to a 'terminator' if it is non-zero, which however is costly.
+  //
+  if (termination_forced)
+  {
+    LOG ("termination asynchronously forced");
+    return true;
+  }
+
+  // This is only for testing and debugging asynchronous termination calls.
+  // In production code this could be removed but then should not be costly
+  // and keeping it will allow to test correctness of asynchronous
+  // termination on the production platform too.  After this triggers we
+  // have to set the 'termination_forced' flag, such that subsequent calls
+  // to this function do not check this again.
+  //
+  if (lim.terminate.forced) {
+    assert (lim.terminate.forced > 0);
+    if (lim.terminate.forced-- == 1) {
+      LOG ("internally forcing termination");
+      termination_forced = true;
+      return true;
+    }
+    LOG ("decremented internal forced termination limit to %d",
+      lim.terminate.forced);
+  }
+
+  // The second way of asynchronous termination is through registering and
+  // calling an external 'Terminator' object.  This is of course more costly
+  // than just checking a (volatile though) boolean flag, particularly in
+  // tight loops.  To avoid this cost we only call the terminator in
+  // intervals of 'opts.terminateint', which in addition can be scaled up by
+  // the argument 'factor'.  If the terminator returns 'true' we set the
+  // 'termination_forced' flag to 'true' in order to remember the
+  // termination status and to avoid the terminator again.  Setting this
+  // flag leads to the first test above to succeed in subsequent calls.
+  //
+  if (external->terminator && !lim.terminate.check--) {
+    assert (factor > 0);
+    assert (INT_MAX/factor > opts.terminateint);
+    lim.terminate.check = factor * opts.terminateint;
+    if (external->terminator->terminate ()) {
+      termination_forced = true;                        // Cache it.
+      LOG ("connected terminator forces termination");
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/*------------------------------------------------------------------------*/
+
+inline bool Internal::search_limits_hit ()
+{
+  assert (!preprocessing);
+  assert (!localsearching);
+
+  if (lim.conflicts >= 0 &&
+      stats.conflicts >= lim.conflicts) {
+    LOG ("conflict limit %" PRId64 " reached", lim.conflicts);
+    return true;
+  }
+
+  if (lim.decisions >= 0 &&
+      stats.decisions >= lim.decisions) {
+    LOG ("decision limit %" PRId64 " reached", lim.decisions);
+    return true;
+  }
+
+  return false;
+}
+
+/*------------------------------------------------------------------------*/
 
 }
 

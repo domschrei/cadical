@@ -76,10 +76,10 @@ static inline bool evsids_limit_hit (double score) {
 
 // Classical exponential VSIDS as pioneered by MiniSAT.
 
-void Internal::rescore () {
+void Internal::rescale_variable_scores () {
   stats.rescored++;
-  double divider = scinc;
-  for (int idx = 1; idx <= max_var; idx++) {
+  double divider = score_inc;
+  for (auto idx : vars) {
     const double tmp = stab[idx];
     if (tmp > divider) divider = tmp;
   }
@@ -87,26 +87,26 @@ void Internal::rescore () {
     "rescoring %d variable scores by 1/%g", max_var, divider);
   assert (divider > 0);
   double factor = 1.0 / divider;
-  for (int idx = 1; idx <= max_var; idx++)
+  for (auto idx : vars)
     stab[idx] *= factor;
-  scinc *= factor;
+  score_inc *= factor;
   PHASE ("rescore", stats.rescored,
     "new score increment %g after %" PRId64 " conflicts",
-    scinc, stats.conflicts);
+    score_inc, stats.conflicts);
 }
 
-void Internal::bump_score (int lit) {
+void Internal::bump_variable_score (int lit) {
   assert (opts.bump);
   int idx = vidx (lit);
   double old_score = score (idx);
   assert (!evsids_limit_hit (old_score));
-  double new_score = old_score + scinc;
+  double new_score = old_score + score_inc;
   if (evsids_limit_hit (new_score)) {
     LOG ("bumping %g score of %d hits EVSIDS score limit", old_score, idx);
-    rescore ();
+    rescale_variable_scores ();
     old_score = score (idx);
     assert (!evsids_limit_hit (old_score));
-    new_score = old_score + scinc;
+    new_score = old_score + score_inc;
   }
   assert (!evsids_limit_hit (new_score));
   LOG ("new %g score of %d", new_score, idx);
@@ -117,26 +117,27 @@ void Internal::bump_score (int lit) {
 // Important variables recently used in conflict analysis are 'bumped',
 
 void Internal::bump_variable (int lit) {
-  if (use_scores ()) bump_score (lit);
+  if (use_scores ()) bump_variable_score (lit);
   else bump_queue (lit);
 }
 
-// After every conflict we increase the score increment by a factor.
+// After every conflict the variable score increment is increased by a
+// factor (if we are currently using scores).
 
-void Internal::bump_scinc () {
+void Internal::bump_variable_score_inc () {
   assert (use_scores ());
-  assert (!evsids_limit_hit (scinc));
+  assert (!evsids_limit_hit (score_inc));
   double f = 1e3/opts.scorefactor;
-  double new_scinc = scinc * f;
-  if (evsids_limit_hit (new_scinc)) {
-    LOG ("bumping %g increment by %g hits EVSIDS score limit", scinc, f);
-    rescore ();
-    new_scinc = scinc * f;
+  double new_score_inc = score_inc * f;
+  if (evsids_limit_hit (new_score_inc)) {
+    LOG ("bumping %g increment by %g hits EVSIDS score limit", score_inc, f);
+    rescale_variable_scores ();
+    new_score_inc = score_inc * f;
   }
-  assert (!evsids_limit_hit (new_scinc));
+  assert (!evsids_limit_hit (new_score_inc));
   LOG ("bumped score increment from %g to %g with factor %g",
-    scinc, new_scinc, f);
-  scinc = new_scinc;
+    score_inc, new_score_inc, f);
+  score_inc = new_score_inc;
 }
 
 /*------------------------------------------------------------------------*/
@@ -144,7 +145,8 @@ void Internal::bump_scinc () {
 struct analyze_bumped_rank {
   Internal * internal;
   analyze_bumped_rank (Internal * i) : internal (i) { }
-  uint64_t operator () (const int & a) const {
+  typedef uint64_t Type;
+  Type operator () (const int & a) const {
     return internal->bumped (a);
   }
 };
@@ -172,9 +174,10 @@ void Internal::bump_variables () {
   if (!use_scores ()) {
 
     // Variables are bumped in the order they are in the current decision
-    // queue.  This maintains relative order between bumped variables in the
-    // queue and seems to work best.  We also experimented with focusing on
-    // variables of the last decision level, but results were mixed.
+    // queue.  This maintains relative order between bumped variables in
+    // the queue and seems to work best.  We also experimented with
+    // focusing on variables of the last decision level, but results were
+    // mixed.
 
     MSORT (opts.radixsortlim,
       analyzed.begin (), analyzed.end (),
@@ -184,7 +187,7 @@ void Internal::bump_variables () {
   for (const auto & lit : analyzed)
     bump_variable (lit);
 
-  if (use_scores ()) bump_scinc ();
+  if (use_scores ()) bump_variable_score_inc ();
 
   STOP (bump);
 }
@@ -207,7 +210,7 @@ int Internal::recompute_glue (Clause * c) {
 }
 
 // Clauses resolved since the last reduction are marked as 'used', their
-// glue is recomputed and they promoted if the glue shrinks.  Note that
+// glue is recomputed and they are promoted if the glue shrinks.  Note that
 // promotion from 'tier3' to 'tier2' will set 'used' to '2'.
 
 inline void Internal::bump_clause (Clause * c) {
@@ -266,6 +269,15 @@ Internal::analyze_reason (int lit, Clause * reason, int & open) {
 /*------------------------------------------------------------------------*/
 
 // This is an idea which was implicit in MapleCOMSPS 2016 for 'limit = 1'.
+// See also the paragraph on 'bumping reason side literals' in their SAT'16
+// paper [LiangGaneshPoupartCzarnecki-SAT'16].  Reason side bumping was
+// performed exactly when 'LRB' based decision heuristics was used, which in
+// the original version was enabled after 10000 conflicts until a time limit
+// of 2500 seconds was reached (half of the competition time limit).  The
+// Maple / Glucose / MiniSAT evolution winning the SAT race in 2019 made
+// the schedule of reason side bumping deterministic, i.e., avoiding a time
+// limit, by switching between 'LRB' and 'VSIDS' in an interval of initially
+// 30 million propagations, which then is increased geometrically by 10%.
 
 inline bool Internal::bump_also_reason_literal (int lit) {
   assert (lit);
@@ -279,6 +291,8 @@ inline bool Internal::bump_also_reason_literal (int lit) {
   LOG ("bumping also reason literal %d assigned at level %d", lit, v.level);
   return true;
 }
+
+// We experimented with deeper reason bumping without much success though.
 
 inline void Internal::bump_also_reason_literals (int lit, int limit) {
   assert (lit);
@@ -299,8 +313,9 @@ inline void Internal::bump_also_reason_literals (int lit, int limit) {
 inline void Internal::bump_also_all_reason_literals () {
   assert (opts.bumpreason);
   assert (opts.bumpreasondepth > 0);
+  LOG ("bumping reasons up to depth %d", opts.bumpreasondepth);
   for (const auto & lit : clause)
-    bump_also_reason_literals (-lit, opts.bumpreasondepth);
+    bump_also_reason_literals (-lit, opts.bumpreasondepth + stable);
 }
 
 /*------------------------------------------------------------------------*/
@@ -335,7 +350,8 @@ void Internal::clear_analyzed_levels () {
 struct analyze_trail_negative_rank {
   Internal * internal;
   analyze_trail_negative_rank (Internal * s) : internal (s) { }
-  uint64_t operator () (int a) {
+  typedef uint64_t Type;
+  Type operator () (int a) {
     Var & v = internal->var (a);
     uint64_t res = v.level;
     res <<= 32;
@@ -442,13 +458,12 @@ Clause * Internal::new_driving_clause (const int glue, int & jump) {
     // frequently.  Thus sorting effort is doubled here.
     //
     MSORT (opts.radixsortlim,
-      clause.begin (), clause.end (),
-      analyze_trail_negative_rank (this), analyze_trail_larger (this));
+           clause.begin (), clause.end (),
+           analyze_trail_negative_rank (this), analyze_trail_larger (this));
 
     jump = var (clause[1]).level;
     res = new_learned_redundant_clause (glue);
-    if (glue <= opts.reducetier2glue) res->used = 2;
-    else res->used = 1;
+    res->used = 1 + (glue <= opts.reducetier2glue);
   }
 
   LOG ("jump level %d", jump);
@@ -509,18 +524,23 @@ inline int Internal::find_conflict_level (int & forced) {
       highest_position = j;
       highest_level = tmp;
       if (highest_level == res) break;
-      if (i && highest_level == res - 1) break;
     }
 
     // No unwatched higher assignment level literal.
     //
-    if (highest_position < 2) continue;
+    if (highest_position == i) continue;
 
-    LOG (conflict, "unwatch %d in", lit);
-    remove_watch (watches (lit), conflict);
+    if (highest_position > 1)
+      {
+        LOG (conflict, "unwatch %d in", lit);
+        remove_watch (watches (lit), conflict);
+      }
+
     lits[highest_position] = lit;
     lits[i] = highest_literal;
-    watch_literal (highest_literal, lits[!i], conflict);
+
+    if (highest_position > 1)
+      watch_literal (highest_literal, lits[!i], conflict);
   }
 
   // Only if the number of highest level literals in the conflict is one
@@ -640,7 +660,7 @@ void Internal::eagerly_subsume_recently_learned_clauses (Clause * c) {
   unmark (c);
 #ifdef LOGGING
   uint64_t subsumed = stats.eagersub - before;
-  if (subsumed) LOG ("eagerly subsumed %d clauses", subsumed);
+  if (subsumed) LOG ("eagerly subsumed %" PRIu64 " clauses", subsumed);
 #endif
 }
 
@@ -721,6 +741,7 @@ void Internal::analyze () {
     LOG ("found conflict at root level");
     build_chain ();
     learn_empty_clause ();
+    if (external->learner) external->export_learned_empty_clause ();
     STOP (analyze);
     return;
   }
@@ -776,17 +797,26 @@ void Internal::analyze () {
   stats.learned.clauses++;
   assert (glue < size);
 
-  // Update decision heuristics.
-  //
-  if (opts.bump) bump_variables ();
 
   // Minimize the 1st UIP clause as pioneered by Niklas Soerensson in
   // MiniSAT and described in our joint SAT'09 paper.
   //
   if (size > 1) {
-    if (opts.minimize) minimize_clause ();
+    if (opts.shrink)
+      shrink_and_minimize_clause();
+    else if (opts.minimize)
+      minimize_clause();
+
     size = (int) clause.size ();
-  }
+
+    // Update decision heuristics.
+    //
+    if (opts.bump)
+      bump_variables();
+
+    if (external->learner) external->export_learned_large_clause (clause, glue);
+  } else if (external->learner)
+    external->export_learned_unit_clause(-uip);
 
   // Build the chain proof for the conflict.
   build_chain ();

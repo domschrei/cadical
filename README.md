@@ -1,8 +1,22 @@
-Adding FRAT style proofs to CaDiCaL
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Build Status](https://travis-ci.com/arminbiere/cadical.svg?branch=master)](https://travis-ci.com/arminbiere/cadical)
+
+
+CaDiCaL Simplified Satisfiability Solver with FRAT-Style Proofs
 ===============================================================================
 
-This is a modification of the CaDiCaL SAT solver (<http://fmv.jku.at/cadical>)
-which adds support for FRAT proofs.
+The goal of the development of CaDiCaL was to obtain a CDCL solver,
+which is easy to understand and change, while at the same time not being
+much slower than other state-of-the-art CDCL solvers.
+
+Originally we wanted to also radically simplify the design and internal data
+structures, but that goal was only achieved partially, at least for instance
+compared to Lingeling.
+
+However, the code is much better documented and CaDiCaL actually became in
+general faster than Lingeling even though it is missing some preprocessors
+(mostly parity and cardinality constraint reasoning), which would be crucial
+to solve certain instances.
 
 Use `./configure && make` to configure and build `cadical` and the library
 `libcadical.a` in the default `build` sub-directory.  The header file of
@@ -14,13 +28,13 @@ process and [`test/README.md`](test/README.md) for testing the library and
 the solver.
 
 The solver has the following usage `cadical [ dimacs [ proof ] ]`.
+To enable FRAT proof output, run `cadical dimacs.cnf proof.frat --lrat=true`.
 See `cadical -h` for more options.
 
-To enable FRAT proof output, run `cadical dimacs.cnf proof.frat --lrat=true`.
 
-## Implementation notes
+## FRAT Implementation notes
 
-The diff is visible [here](https://github.com/arminbiere/cadical/compare/master...digama0:master). The changes break down into the following parts:
+The changes break down into the following parts:
 
 * Clause IDs were previously only enabled if you compile with the `LOGGING` preprocessor flag. Now they are required.
 

@@ -7,13 +7,13 @@ namespace CaDiCaL {
 // Implements a variant of bounded variable elimination as originally
 // described in our SAT'05 paper introducing 'SATeLite'.  This is an
 // inprocessing version, i.e., it is interleaved with search and triggers
-// blocked clause elimination, subsumption and strengthening rounds during
-// elimination rounds.  It focuses only those variables which occurred in
-// removed irredundant clauses since the last time an elimination round
-// was run.  By bounding the maximum resolvent size we can run each
-// elimination round until completion.  See the code of 'elim' for how
-// elimination rounds are interleaved with blocked clause elimination and
-// subsumption (which in turn also calls vivification and transitive
+// subsumption and strengthening, blocked and covered clause elimination
+// during elimination rounds.  It focuses only those variables which
+// occurred in removed irredundant clauses since the last time an
+// elimination round was run.  By bounding the maximum resolvent size we can
+// run each elimination round until completion.  See the code of 'elim' for
+// how elimination rounds are interleaved with blocked clause elimination
+// and subsumption (which in turn also calls vivification and transitive
 // reduction of the binary implication graph).
 
 /*------------------------------------------------------------------------*/
@@ -25,8 +25,9 @@ inline double Internal::compute_elim_score (unsigned lit) {
   const double neg = internal->ntab [uidx + 1];
   if (!pos) return -neg;
   if (!neg) return -pos;
-  double sum = pos + neg, prod = 0;
-  if (opts.elimprod) prod = opts.elimprod * pos * neg;
+  double sum = 0, prod = 0;
+  if (opts.elimsum) sum = opts.elimsum * (pos + neg);
+  if (opts.elimprod) prod = opts.elimprod * (pos * neg);
   return prod + sum;
 }
 
@@ -53,7 +54,6 @@ inline bool elim_more::operator () (unsigned a, unsigned b) {
 
 bool Internal::eliminating () {
 
-  if (!opts.simplify) return false;
   if (!opts.elim) return false;
   if (!preprocessing && !opts.inprocessing) return false;
   if (preprocessing) assert (lim.preprocessing);
@@ -215,10 +215,26 @@ void Internal::elim_on_the_fly_self_subsumption (Eliminator & eliminator,
 // resolvent is not redundant and for instance has to be taken into account
 // during bounded variable elimination.
 
-// Detected units are immediately assigned but not propagated yet.
+// Detected units are immediately assigned and in case the last argument is
+// true also propagated eagerly in a elimination specific propagation
+// routine, which not only finds units but also updates the schedule.
+
+// When this function is called during computation of the number of
+// non-trivial (or non-satisfied) resolvents we can eagerly propagate units.
+// But during actually adding the resolvents this results in problems as we
+// found one rare test case '../test/trace/reg0056.trace' (out of billions),
+// where the pivot itself was assigned during such a propagation while
+// adding resolvents and lead to pushing a clause to the reconstruction
+// stack that later flipped the value of the pivot (while all other literals
+// in that clause were unit implied too).  Not pushing the pivot clauses to
+// the reconstruction stack produced a wrong model too.  Our fix is to only
+// eagerly propagate during computation of the number of resolvents and
+// otherwise delay propagation until the end of elimination (which is less
+// precise regarding scheduling but very rarely happens).
 
 bool Internal::resolve_clauses (Eliminator & eliminator,
-                                Clause * c, int pivot, Clause * d) {
+                                Clause * c, int pivot, Clause * d,
+				const bool propagate_eagerly) {
 
   assert (!c->redundant);
   assert (!d->redundant);
@@ -312,7 +328,8 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
     int unit = clause[0];
     LOG ("unit resolvent %d", unit);
     assign_unit (unit);
-    elim_propagate (eliminator, unit);
+    if (propagate_eagerly)
+      elim_propagate (eliminator, unit);
     return false;
   }
 
@@ -385,7 +402,8 @@ Internal::elim_resolvents_are_bounded (Eliminator & eliminator, int pivot)
   if (!pos || !neg) return lim.elimbound >= 0;
   const int64_t bound = pos + neg + lim.elimbound;
 
-  LOG ("checking number resolvents on %d bounded by %" PRId64 " = %" PRId64 " + %" PRId64 " + %d",
+  LOG ("checking number resolvents on %d bounded by "
+    "%" PRId64 " = %" PRId64 " + %" PRId64 " + %" PRId64,
     pivot, bound, pos, neg, lim.elimbound);
 
   // Try all resolutions between a positive occurrence (outer loop) of
@@ -403,14 +421,16 @@ Internal::elim_resolvents_are_bounded (Eliminator & eliminator, int pivot)
       if (d->garbage) continue;
       if (substitute && c->gate == d->gate) continue;
       stats.elimrestried++;
-      if (resolve_clauses (eliminator, c, pivot, d)) {
+      if (resolve_clauses (eliminator, c, pivot, d, true)) {
         resolvents++;
         int size = clause.size ();
         clause.clear (), chain.clear ();
-        LOG ("now at least %" PRId64 " non-tautological resolvents on pivot %d",
+        LOG ("now at least %" PRId64
+          " non-tautological resolvents on pivot %d",
           resolvents, pivot);
         if (size > opts.elimclslim) {
-          LOG ("resolvent size %d too big after %" PRId64 " resolvents on %d",
+          LOG ("resolvent size %d too big after %" PRId64
+            " resolvents on %d",
             size, resolvents, pivot);
           return false;
         }
@@ -423,7 +443,8 @@ Internal::elim_resolvents_are_bounded (Eliminator & eliminator, int pivot)
     }
   }
 
-  LOG ("need %" PRId64 " <= %" PRId64 " non-tautological resolvents", resolvents, bound);
+  LOG ("need %" PRId64 " <= %" PRId64 " non-tautological resolvents",
+    resolvents, bound);
 
   return true;
 }
@@ -458,8 +479,7 @@ Internal::elim_add_resolvents (Eliminator & eliminator, int pivot) {
       if (unsat) break;
       if (d->garbage) continue;
       if (substitute && c->gate == d->gate) continue;
-      if (!resolve_clauses (eliminator, c, pivot, d)) continue;
-      assert (clause.size () <= (size_t) opts.elimclslim);
+      if (!resolve_clauses (eliminator, c, pivot, d, false)) continue;
       Clause * r = new_resolved_irredundant_clause ();
       elim_update_added_clause (eliminator, r);
       eliminator.enqueue (r);
@@ -595,14 +615,13 @@ Internal::mark_redundant_clauses_with_eliminated_variables_as_garbage () {
 
 /*------------------------------------------------------------------------*/
 
-// Perform one round of bounded variable elimination and return 'false' if
-// no variable was eliminated even though elimination ran to completion.
-// Thus the result is 'false' iff elimination completed for this
-// particular elimination bound (which will trigger its increase) and it is
-// 'true' if at least one variable was eliminated or the resolution limit
-// was hit and elimination did not run to completion.
+// This function performs one round of bounded variable elimination and
+// returns the number of eliminated variables. The additional result
+// 'completed' is true if this elimination round ran to completion (all
+// variables have been tried).  Otherwise it was asynchronously terminated
+// or the resolution limit was hit.
 
-bool Internal::elim_round () {
+int Internal::elim_round (bool & completed) {
 
   assert (opts.elim);
   assert (!unsat);
@@ -627,8 +646,7 @@ bool Internal::elim_round () {
 
      resolution_limit = stats.elimres + delta;
   } else {
-    PHASE ("elim-round", stats.elimrounds,
-      "resolutions unlimited");
+    PHASE ("elim-round", stats.elimrounds, "resolutions unlimited");
     resolution_limit = LONG_MAX;
   }
 
@@ -647,7 +665,7 @@ bool Internal::elim_round () {
       else if (tmp < 0) falsified = true;
       else assert (active (lit));
     }
-    if (satisfied) mark_garbage (c);          // more precise counts
+    if (satisfied) mark_garbage (c);     // forces more precise counts
     else {
       for (const auto & lit : *c) {
         if (!active (lit)) continue;
@@ -658,15 +676,15 @@ bool Internal::elim_round () {
   }
 
   init_occs ();
+
   Eliminator eliminator (this);
   ElimSchedule & schedule = eliminator.schedule;
 
-  // Now find elimination candidates with small number of occurrences, which
-  // do not occur in too large clauses but do occur in clauses which have
-  // been removed since the last time we ran bounded variable elimination,
-  // which in turned triggered their 'elim' bit to be set.
+  // Now find elimination candidates which occurred in clauses removed since
+  // the last time we ran bounded variable elimination, which in turned
+  // triggered their 'elim' bit to be set.
   //
-  for (int idx = 1; idx <= max_var; idx++) {
+  for (auto idx : vars) {
     if (!active (idx)) continue;
     if (frozen (idx)) continue;
     if (!flags (idx).elim) continue;
@@ -704,13 +722,15 @@ bool Internal::elim_round () {
   //
   const int64_t garbage_limit = (2*stats.irrbytes/3) + (1<<20);
 
-  // Try eliminating variables according to the schedule.
+  // Main loops tries to eliminate variables according to the schedule. The
+  // schedule is updated dynamically and variables are potentially
+  // rescheduled to be tried again if they occur in a removed clause.
   //
 #ifndef QUIET
   int64_t tried = 0;
 #endif
   while (!unsat &&
-         !terminating () &&
+         !terminated_asynchronously () &&
          stats.elimres <= resolution_limit &&
          !schedule.empty ()) {
     int idx = schedule.front ();
@@ -725,12 +745,15 @@ bool Internal::elim_round () {
     garbage_collection ();
   }
 
-  const int64_t remain = schedule.size ();
-  const bool completed = !remain;
+  // If the schedule is empty all variables have been tried (even
+  // rescheduled ones).  Otherwise asynchronous termination happened or we
+  // ran into the resolution limit (or derived unsatisfiability).
+  //
+  completed = !schedule.size ();
 
   PHASE ("elim-round", stats.elimrounds,
-    "tried to eliminate %" PRId64 " variables %.0f%% (%" PRId64 " remain)",
-    tried, percent (tried, scheduled), remain);
+    "tried to eliminate %" PRId64 " variables %.0f%% (%zd remain)",
+    tried, percent (tried, scheduled), schedule.size ());
 
   schedule.erase ();
 
@@ -739,7 +762,7 @@ bool Internal::elim_round () {
   //
   Instantiator instantiator;
   if (!unsat &&
-      !terminating () &&
+      !terminated_asynchronously () &&
       opts.instantiate)
     collect_instantiation_candidates (instantiator);
 
@@ -755,7 +778,7 @@ bool Internal::elim_round () {
 #ifndef QUIET
   int64_t resolutions = stats.elimres - old_resolutions;
   PHASE ("elim-round", stats.elimrounds,
-    "eliminated %" PRId64 " variables %.0f%% in %" PRId64 " resolutions",
+    "eliminated %d variables %.0f%% in %" PRId64 " resolutions",
     eliminated, percent (eliminated, scheduled), resolutions);
 #endif
 
@@ -765,18 +788,21 @@ bool Internal::elim_round () {
   STOP_SIMPLIFIER (elim, ELIM);
 
   if (!unsat &&
-      !terminating () &&
+      !terminated_asynchronously () &&
       instantiator)                     // Do we have candidate pairs?
     instantiate (instantiator);
 
-  return !completed || eliminated;
+  return eliminated;                    // non-zero if successful
 }
 
 /*------------------------------------------------------------------------*/
 
 // Increase elimination bound (additional clauses allowed during variable
 // elimination), which is triggered if elimination with last bound completed
-// (including no new subsumptions).
+// (including no new subsumptions).  This was pioneered by GlueMiniSAT in
+// the SAT Race 2015 and then picked up Chanseok Oh in his COMinisatPS
+// solver, which in turn is used in the Maple series of SAT solvers.
+// The bound is no increased if the maximum bound is reached.
 
 void Internal::increase_elimination_bound () {
 
@@ -795,13 +821,15 @@ void Internal::increase_elimination_bound () {
   // Now reschedule all active variables for elimination again.
   //
   int count = 0;
-  for (int idx = 1; idx <= max_var; idx++) {
+  for (auto idx : vars) {
     if (!active (idx)) continue;
     if (flags (idx).elim) continue;
     mark_elim (idx);
     count++;
   }
   LOG ("marked %d variables as elimination candidates", count);
+
+  report ('^');
 }
 
 /*------------------------------------------------------------------------*/
@@ -813,10 +841,13 @@ void Internal::elim (bool update_limits) {
   if (!propagate ()) { learn_empty_clause (); return; }
 
   stats.elimphases++;
+  PHASE ("elim-phase", stats.elimphases,
+    "starting at most %d elimination rounds",
+    opts.elimrounds);
 
 #ifndef QUIET
-  int old_eliminated = stats.all.eliminated;
   int old_active_variables = active ();
+  int old_eliminated = stats.all.eliminated;
 #endif
 
   // Make sure there was a complete subsumption phase since last
@@ -827,48 +858,67 @@ void Internal::elim (bool update_limits) {
 
   reset_watches ();             // saves lots of memory
 
-  // Alternate blocked clause elimination, variable elimination and
-  // subsumption, blocked and covered clause elimination until nothing
-  // changes or the round limit is hit.
+  // Alternate one round of bounded variable elimination ('elim_round') and
+  // subsumption ('subsume_round'), blocked ('block') and covered clause
+  // elimination ('cover') until nothing changes, or the round limit is hit.
+  // The loop also aborts early if no variable could be eliminated, the
+  // empty clause is resolved, it is asynchronously terminated or a
+  // resolution limit is hit.
+
+  // This variable determines whether the whole loop of this bounded
+  // variable elimination phase ('elim') ran until completion.  This
+  // potentially triggers an incremental increase of the elimination bound.
   //
-  bool completed = false, blocked = false, covered = false;
+  bool phase_complete = false;
+
   int round = 1;
 
-  while (!unsat && !terminating ()) {
+  while (!unsat &&
+         !phase_complete &&
+         !terminated_asynchronously ()) {
 
-    if (elim_round ()) {        // Elimination successful or limit hit.
+    bool round_complete;
 
-      blocked = covered = false;        // Enable again.
+#ifndef QUIET
+    int eliminated =
+#endif
+    elim_round (round_complete);
 
-      if (round++ >= opts.elimrounds) break;
-
-      if (subsume_round ()) continue;   // New elimination candidates.
-
-    } else {                    // Completed but nothing eliminated.
-
-      completed = true;         // Triggers elimination bound increase.
-
-      if (round++ >= opts.elimrounds) break;
+    if (!round_complete) {
+      PHASE ("elim-phase", stats.elimphases,
+        "last round %d incomplete %s",
+        round, eliminated ? "but successful" : "and unsuccessful");
+      assert (!phase_complete);
+      break;
     }
 
-    if (!blocked) {
-      blocked = true;           // Only once per failed elimination
-      if (block ()) continue;   // At least one blocked clause.
+    if (round++ >= opts.elimrounds) {
+      PHASE ("elim-phase", stats.elimphases,
+        "round limit %d hit (%s)", round-1,
+        eliminated ? "though last round successful" :
+                     "last round unsuccessful anyhow");
+      assert (!phase_complete);
+      break;
     }
 
-    if (!covered) {
-      covered = true;           // Only once per failed elimination
-      if (cover ()) continue;   // At least one covered clause.
-    }
+    // Prioritize 'subsumption' over blocked and covered clause elimination.
+
+    if (subsume_round ()) continue;
+    if (block ()) continue;
+    if (cover ()) continue;
 
     // Was not able to generate new variable elimination candidates after
     // variable elimination round, neither through subsumption, nor blocked,
     // nor covered clause elimination.
     //
-    break;
+    PHASE ("elim-phase", stats.elimphases,
+      "no new variable elimination candidates");
+
+    assert (round_complete);
+    phase_complete = true;
   }
 
-  if (completed) {
+  if (phase_complete) {
     stats.elimcompleted++;
     PHASE ("elim-phase", stats.elimphases,
       "fully completed elimination %" PRId64
@@ -886,13 +936,18 @@ void Internal::elim (bool update_limits) {
 
   if (unsat) LOG ("elimination derived empty clause");
   else if (propagated < trail.size ()) {
-    LOG ("elimination produced %" PRId64 " units",
-      trail.size () - propagated);
+    LOG ("elimination produced %zd units",
+      (size_t)(trail.size () - propagated));
     if (!propagate ()) {
       LOG ("propagating units after elimination results in empty clause");
       learn_empty_clause ();
     }
   }
+
+  // If we ran variable elimination until completion we increase the
+  // variable elimination bound and reschedule elimination of all variables.
+  //
+  if (phase_complete) increase_elimination_bound ();
 
 #ifndef QUIET
   int eliminated = stats.all.eliminated - old_eliminated;
@@ -900,8 +955,6 @@ void Internal::elim (bool update_limits) {
     "eliminated %d variables %.2f%%",
     eliminated, percent (eliminated, old_active_variables));
 #endif
-
-  if (completed) increase_elimination_bound ();
 
   if (!update_limits) return;
 

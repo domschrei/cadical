@@ -60,19 +60,20 @@ void Internal::print_profile () {
   SECTION ("run-time profiling");
   PRT ("%s time taken by individual solving procedures", time_type);
   PRT ("(percentage relative to %s time for solving)", time_type);
-  MSG ("");
+  LINE ();
   const size_t size = sizeof profiles / sizeof (Profile);
   struct Profile * profs[size];
   size_t n = 0;
 #define PROFILE(NAME,LEVEL) \
 do { \
   if (LEVEL > opts.profile) break; \
-  if (&profiles.NAME == &profiles.solve) break; \
+  Profile * p = &profiles.NAME; \
+  if (p == &profiles.solve) break; \
   if (!profiles.NAME.value && \
-      &profiles.NAME != &profiles.parse && \
-      &profiles.NAME != &profiles.search && \
-      &profiles.NAME != &profiles.simplify) break; \
-  profs[n++] = &profiles.NAME; \
+      p != &profiles.parse && \
+      p != &profiles.search && \
+      p != &profiles.simplify) break; \
+  profs[n++] = p; \
 } while (0);
   PROFILES
 #undef PROFILE
@@ -97,7 +98,7 @@ do { \
   MSG ("  =================================");
   MSG ("%12.2f %7.2f%% solve", solve, percent (solve, now));
 
-  MSG ("");
+  LINE ();
   PRT ("last line shows %s time for solving", time_type);
   PRT ("(percentage relative to total %s time)", time_type);
 }

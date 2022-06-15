@@ -125,7 +125,6 @@ bool Internal::vivify_propagate () {
         if (w.clause == ignore) continue;
         literal_iterator lits = w.clause->begin ();
         const int other = lits[0]^lits[1]^lit;
-        lits[0] = other, lits[1] = lit;
         const signed char u = val (other);
         if (u > 0) j[-1].blit = other;
         else {
@@ -145,10 +144,10 @@ bool Internal::vivify_propagate () {
           }
           w.clause->pos = k - lits;
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
-          if (v > 0) {
-            j[-1].blit = r;
-          } else if (!v) {
+          if (v > 0) j[-1].blit = r;
+          else if (!v) {
             LOG (w.clause, "unwatch %d in", r);
+            lits[0] = other;
             lits[1] = r;
             *k = lit;
             watch_literal (r, lit, w.clause);
@@ -299,11 +298,11 @@ struct vivify_flush_smaller {
   bool operator () (Clause * a, Clause * b) const {
 
     const auto eoa = a->end (), eob = b->end ();
-    auto j = b->begin ();
-    for (auto i = a->begin (); i != eoa && j != eob; i++, j++)
+    auto i = a->begin (), j = b->begin ();
+    for (; i != eoa && j != eob; i++, j++)
       if (*i != *j) return *i < *j;
 
-    return j == eob;
+    return j == eob && i != eoa;
   }
 };
 
@@ -642,20 +641,23 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
     // As long the (remaining) literals of the sorted clause match
     // decisions on the trail we just reuse them.
     //
-    int l = 1;        // This is the decision level we want to reuse.
+    if (level) {
 
-    for (const auto & lit : sorted) {
-      if (fixed (lit)) continue;
-      const int decision = control[l].decision;
-      if (-lit == decision) {
-        LOG ("reusing decision %d at decision level %d", decision, l);
-        stats.vivifyreused++;
-        if (++l > level) break;
-      } else {
-        LOG ("literal %d does not match decision %d at decision level %d",
-          lit, decision, l);
-        backtrack (l-1);
-        break;
+      int l = 1;        // This is the decision level we want to reuse.
+
+      for (const auto & lit : sorted) {
+	if (fixed (lit)) continue;
+	const int decision = control[l].decision;
+	if (-lit == decision) {
+	  LOG ("reusing decision %d at decision level %d", decision, l);
+	  stats.vivifyreused++;
+	  if (++l > level) break;
+	} else {
+	  LOG ("literal %d does not match decision %d at decision level %d",
+	    lit, decision, l);
+	  backtrack (l-1);
+	  break;
+	}
       }
     }
 
@@ -884,7 +886,8 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
 
 void Internal::vivify_round (bool redundant_mode, int64_t propagation_limit) {
 
-  if (unsat || terminating ()) return;
+  if (unsat) return;
+  if (terminated_asynchronously ()) return;
 
   PHASE ("vivify", stats.vivifications,
     "starting %s vivification round propagation limit %" PRId64 "",
@@ -892,7 +895,7 @@ void Internal::vivify_round (bool redundant_mode, int64_t propagation_limit) {
 
   // Disconnect all watches since we sort literals within clauses.
   //
-  if (watching ()) disconnect_watches ();
+  if (watching ()) clear_watches ();
 
   // Count the number of occurrences of literals in all clauses,
   // particularly binary clauses, which are usually responsible
@@ -985,7 +988,7 @@ void Internal::vivify_round (bool redundant_mode, int64_t propagation_limit) {
   }
 
   while (!unsat &&
-         !terminating () &&
+         !terminated_asynchronously () &&
          !vivifier.schedule.empty () &&
          stats.propagations.vivify < limit) {
     Clause * c = vivifier.schedule.back ();              // Next candidate.
@@ -1008,8 +1011,8 @@ void Internal::vivify_round (bool redundant_mode, int64_t propagation_limit) {
     //
     if (still_need_to_be_vivified)
       PHASE ("vivify", stats.vivifications,
-        "still need to vivify %" PRId64 " clauses %.02f%% of %" PRId64 " scheduled",
-        still_need_to_be_vivified,
+        "still need to vivify %" PRId64 " clauses %.02f%% of %" PRId64
+        " scheduled", still_need_to_be_vivified,
         percent (still_need_to_be_vivified, scheduled),
         scheduled);
     else {
@@ -1022,7 +1025,7 @@ void Internal::vivify_round (bool redundant_mode, int64_t propagation_limit) {
     vivifier.erase ();          // Reclaim  memory early.
   }
 
-  disconnect_watches ();
+  clear_watches ();
   connect_watches ();
 
   if (!unsat) {
@@ -1075,11 +1078,11 @@ void Internal::vivify_round (bool redundant_mode, int64_t propagation_limit) {
 
 void Internal::vivify () {
 
-  if (unsat || terminating ()) return;
+  if (unsat) return;
+  if (terminated_asynchronously ()) return;
   if (!stats.current.irredundant) return;
 
   assert (opts.vivify);
-  assert (opts.simplify);
   assert (!level);
 
   START_SIMPLIFIER (vivify, VIVIFY);

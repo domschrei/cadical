@@ -43,16 +43,29 @@ int Internal::next_decision_variable () {
 /*------------------------------------------------------------------------*/
 
 // Implements phase saving as well using a target phase during
-// stabilization unless decision phase is forced to the initial value.
+// stabilization unless decision phase is forced to the initial value
+// of a phase is forced through the 'phase' option.
 
 int Internal::decide_phase (int idx, bool target) {
   const int initial_phase = opts.phase ? 1 : -1;
   int phase = 0;
   if (force_saved_phase) phase = phases.saved[idx];
   if (!phase && opts.forcephase) phase = initial_phase;
-  if (!phase && target)  phase = phases.target[idx];
+  if (!phase) phase = phases.forced[idx];               // TODO swap?
+  if (!phase && target) phase = phases.target[idx];
   if (!phase) phase = phases.saved[idx];
+
+  // The following should no be necessary and in some version we had even
+  // a hard 'COVER' assertion here to check for this.   Unfortunately it
+  // triggered for some users and we could not get to the root cause of
+  // 'phase' still not being set here.  The logic for phase and target
+  // saving is pretty complex, particularly in combination with local
+  // search, and to avoid running in such an issue in the future again, we
+  // now use this 'defensive' code here, even though such defensive code is
+  // considered bad programming practice.
+  //
   if (!phase) phase = initial_phase;
+
   return phase * idx;
 }
 
@@ -97,7 +110,7 @@ int Internal::decide () {
   } else {
     stats.decisions++;
     int idx = next_decision_variable ();
-    const bool target = opts.stabilizephase && stable;
+    const bool target = (opts.target > 1 || (stable && opts.target));
     int decision = decide_phase (idx, target);
     search_assume_decision (decision);
   }
