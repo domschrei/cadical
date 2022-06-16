@@ -237,7 +237,7 @@ void Internal::import_redundant_clauses (int& res) {
   while (external->learnSource->hasNextClause ()) {
 
     // Fetch pointer to 1st literal and size of the clause (plus glue)
-    auto cls = external->learnSource->getNextClause ();
+    const std::vector<int>& cls = external->learnSource->getNextClause ();
     size_t size = cls.size ();
     //printf("Import clause of size %lu\n", size);
     assert (size > 0);
@@ -293,7 +293,7 @@ void Internal::import_redundant_clauses (int& res) {
       if (clause.size () >= 2) {
         //printf("Learn non-unit clause\n");
         external->check_learned_clause ();
-        Clause * res = new_clause (true, glue);
+        Clause * res = new_clause (0, true, glue); //TODO imported clause ID
         if (proof) proof->add_derived_clause (res);
         assert (watching ());
         watch_clause (res);
@@ -319,7 +319,7 @@ void Internal::import_redundant_clauses (int& res) {
       // Do not import units which are already fixed
       if (f.status == Flags::FIXED) continue;
       // Actually add the unit clause
-      if (add) assign_original_unit (0, ilit);
+      if (add) assign_original_unit (0, ilit); //TODO determine if this is imported or new in this instance
     }
 
     // Stop importing if SAT or UNSAT was found
