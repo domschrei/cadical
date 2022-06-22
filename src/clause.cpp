@@ -352,6 +352,7 @@ void Internal::add_new_original_clause (clause_id_t id) {
   } else {
     size_t size = clause.size ();
     clause_id_t cid = original.size () > size ? next_clause_id() : id;
+    bool out_to_proof = false;
     if (!size) {
       if (!unsat) {
         if (!original.size ()) {
@@ -371,6 +372,17 @@ void Internal::add_new_original_clause (clause_id_t id) {
         unsat = true;
       }
     } else if (size == 1) {
+      //In order to support the changes to assign_original_unit, we need to output
+      //the clause to the proof before calling that function
+      if (original.size () > size) {
+        external->check_learned_clause ();
+        if (proof) {
+          out_to_proof = true;
+          PROOF_TODO (proof, "minified original clause", 30); // TODO(Mario)
+          proof->add_derived_clause (cid, clause);
+          proof->delete_clause (id, original);
+        }
+      }
       assign_original_unit (cid, clause[0]);
     } else {
       Clause * c = new_clause (cid, false);
@@ -378,7 +390,7 @@ void Internal::add_new_original_clause (clause_id_t id) {
     }
     if (original.size () > size) {
       external->check_learned_clause ();
-      if (proof) {
+      if (proof && !out_to_proof) {
         PROOF_TODO (proof, "minified original clause", 30); // TODO(Mario)
         proof->add_derived_clause (cid, clause);
         proof->delete_clause (id, original);
