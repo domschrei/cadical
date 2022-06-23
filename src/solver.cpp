@@ -339,6 +339,15 @@ Solver::Solver () {
   if (tracing_api_calls_through_environment_variable_method)
     message ("tracing API calls to '%s'", path);
 #endif
+
+  // --lrat=true --binary=0 --elim=0 --decompose=0 --ternary=0 --vivify=0 --probe=0 --transred=0
+  set ("binary", 0);
+  set ("elim", 0);
+  set ("decompose", 0);
+  set ("ternary", 0);
+  set ("vivify", 0);
+  set ("probe", 0);
+  set ("transred", 0);
 }
 
 Solver::~Solver () {

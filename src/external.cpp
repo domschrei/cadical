@@ -513,10 +513,17 @@ void External::export_learned_empty_clause () {
 
 void External::export_learned_unit_clause (int ilit) {
   assert (learner);
-  if (learner->learning (1)) {
+  if (learner->learning (1+2)) {
     LOG ("exporting learned unit clause");
     const int elit = internal->externalize (ilit);
     assert (elit);
+
+    uint64_t clauseId = internal->stats.learned.clauses;
+    int clauseIdInts[2];
+    memcpy(clauseIdInts, &clauseId, sizeof(uint64_t));
+    learner->learn (clauseIdInts[0]);
+    learner->learn (clauseIdInts[1]);
+    
     learner->learn (elit);
     learner->learn (0);
   } else
@@ -527,9 +534,17 @@ void External::export_learned_large_clause (const vector<int> & clause, int glue
   assert (learner);
   size_t size = clause.size ();
   assert (size <= (unsigned) INT_MAX);
-  if (learner->learning ((int) size)) {
+  
+  if (learner->learning ((int) size + 2)) {
     LOG ("exporting learned clause of size %zu", size);
     learner->learn (glue);
+
+    uint64_t clauseId = internal->stats.learned.clauses;
+    int clauseIdInts[2];
+    memcpy(clauseIdInts, &clauseId, sizeof(uint64_t));
+    learner->learn (clauseIdInts[0]);
+    learner->learn (clauseIdInts[1]);
+
     for (auto ilit : clause) {
       const int elit = internal->externalize (ilit);
       assert (elit);

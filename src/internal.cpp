@@ -235,6 +235,19 @@ void Internal::import_redundant_clauses (int& res) {
 
     // Fetch pointer to 1st literal and size of the clause (plus glue)
     auto cls = external->learnSource->getNextClause ();
+
+    assert (cls.size() >= 3);
+    uint64_t clauseId;
+    if (cls.size() == 3) {
+      // Unit clause: two metadata ints, then the unit literal
+      clauseId = *((uint64_t*) cls.data());
+      cls.erase(cls.begin(), cls.begin()+2);
+    } else {
+      // Non-unit clause: LBD score, then the two metadata ints, then the literals
+      clauseId = *((uint64_t*) cls.data()+1);
+      cls.erase(cls.begin()+1, cls.begin()+3);
+    }
+
     size_t size = cls.size ();
     //printf("Import clause of size %lu\n", size);
     assert (size > 0);
