@@ -57,12 +57,12 @@ OPTION( covermaxeff,     1e8,  0,2e9,1,0,1, "maximum cover efficiency") \
 OPTION( coverminclslim,    4,  2,2e9,0,0,1, "minimum clause size") \
 OPTION( covermineff,     1e6,  0,2e9,1,0,1, "minimum cover efficiency") \
 OPTION( coverreleff,       4,  1,1e5,1,0,1, "relative efficiency per mille") \
-OPTION( decompose,         1,  0,  1,0,1,1, "decompose BIG in SCCs and ELS") \
+OPTION( decompose,         0,  0,  1,0,1,1, "decompose BIG in SCCs and ELS") \
 OPTION( decomposerounds,   2,  1, 16,1,0,1, "number of decompose rounds") \
 OPTION( deduplicate,       1,  0,  1,0,1,1, "remove duplicated binary clauses") \
 OPTION( eagersubsume,      1,  0,  1,0,0,1, "subsume recently learned") \
 OPTION( eagersubsumelim,  20,  1,1e3,0,0,1, "limit on subsumed candidates") \
-OPTION( elim,              1,  0,  1,0,1,1, "bounded variable elimination") \
+OPTION( elim,              0,  0,  1,0,1,1, "bounded variable elimination") \
 OPTION( elimands,          1,  0,  1,0,0,1, "find AND gates") \
 OPTION( elimaxeff,       2e9,  0,2e9,1,0,1, "maximum elimination efficiency") \
 OPTION( elimbackward,      1,  0,  1,0,0,1, "eager backward subsumption") \
@@ -100,12 +100,12 @@ OPTION( instantiateocclim, 1,  1,2e9,2,0,1, "maximum occurrence limit") \
 OPTION( instantiateonce,   1,  0,  1,0,0,1, "instantiate each clause once") \
 LOGOPT( log,               0,  0,  1,0,0,0, "enable logging") \
 LOGOPT( logsort,           0,  0,  1,0,0,0, "sort logged clauses") \
-OPTION( lrat,              0,  0,  1,0,0,0, "use (approximate) LRAT proof format") \
+OPTION( lrat,              1,  0,  1,0,0,0, "use (approximate) LRAT proof format") \
 OPTION( lucky,             1,  0,  1,0,0,1, "search for lucky phases")  \
 OPTION( minimize,          1,  0,  1,0,0,1, "minimize learned clauses") \
 OPTION( minimizedepth,   1e3,  0,1e3,0,0,1, "minimization depth") \
 OPTION( phase,             1,  0,  1,0,0,1, "initial phase") \
-OPTION( probe,             1,  0,  1,0,1,1, "failed literal probing" ) \
+OPTION( probe,             0,  0,  1,0,1,1, "failed literal probing" ) \
 OPTION( probehbr,          1,  0,  1,0,0,1, "learn hyper binary clauses") \
 OPTION( probeint,        5e3,  1,2e9,0,0,1, "probing interval" ) \
 OPTION( probemaxeff,     1e8,  0,2e9,1,0,1, "maximum probing efficiency") \
@@ -163,19 +163,19 @@ OPTION( subsumereleff,   1e3,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( subsumestr,        1,  0,  1,0,0,1, "strengthen during subsume") \
 OPTION( target,            1,  0,  2,0,0,1, "target phases (1=stable only)") \
 OPTION( terminateint,     10,  0,1e4,0,0,1, "termination check interval") \
-OPTION( ternary,           1,  0,  1,0,1,1, "hyper ternary resolution") \
+OPTION( ternary,           0,  0,  1,0,1,1, "hyper ternary resolution") \
 OPTION( ternarymaxadd,   1e3,  0,1e4,1,0,1, "maximum clauses added in percent") \
 OPTION( ternarymaxeff,   1e8,  0,2e9,1,0,1, "ternary maximum efficiency") \
 OPTION( ternarymineff,   1e6,  1,2e9,1,0,1, "minimum ternary efficiency") \
 OPTION( ternaryocclim,   1e2,  1,2e9,2,0,1, "ternary occurrence limit") \
 OPTION( ternaryreleff,    10,  1,1e5,1,0,1, "relative efficiency in per mille") \
 OPTION( ternaryrounds,     2,  1, 16,1,0,1, "maximum ternary rounds") \
-OPTION( transred,          1,  0,  1,0,1,1, "transitive reduction of BIG") \
+OPTION( transred,          0,  0,  1,0,1,1, "transitive reduction of BIG") \
 OPTION( transredmaxeff,  1e8,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( transredmineff,  1e6,  0,2e9,1,0,1, "minimum efficiency") \
 OPTION( transredreleff,  1e2,  1,1e5,1,0,1, "relative efficiency per mille") \
 QUTOPT( verbose,           0,  0,  3,0,0,0, "more verbose messages") \
-OPTION( vivify,            1,  0,  1,0,1,1, "vivification") \
+OPTION( vivify,            0,  0,  1,0,1,1, "vivification") \
 OPTION( vivifymaxeff,    1e8,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( vivifymineff,    1e5,  0,2e9,1,0,1, "minimum efficiency") \
 OPTION( vivifyonce,        0,  0,  2,0,0,1, "vivify once: 1=red, 2=red+irr") \
