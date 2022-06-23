@@ -89,8 +89,8 @@ struct External {
   LearnSource * learnSource;
 
   void export_learned_empty_clause ();
-  void export_learned_unit_clause (int ilit);
-  void export_learned_large_clause (const vector<int> &, int glue);
+  void export_learned_unit_clause (clause_id_t clause_id, int ilit);
+  void export_learned_large_clause (clause_id_t clause_id, const vector<int> &, int glue);
 
   //----------------------------------------------------------------------//
 

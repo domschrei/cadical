@@ -512,25 +512,42 @@ void External::export_learned_empty_clause () {
     LOG ("not exporting learned empty clause");
 }
 
-void External::export_learned_unit_clause (int ilit) {
+void External::export_learned_unit_clause (clause_id_t clause_id, int ilit) {
   assert (learner);
-  if (learner->learning (1)) {
+  //1 + 2:  1 literals + 2 metedata ints for clause ID
+  if (learner->learning (1 + 2)) {
     LOG ("exporting learned unit clause");
     const int elit = internal->externalize (ilit);
     assert (elit);
+
+    //produce two ints for exporting clause ID and export before clause
+    int clause_id_ints[2];
+    memcpy(clause_id_ints, &clause_id, sizeof(int64_t));
+    learner->learn (clause_id_ints[0]);
+    learner->learn (clause_id_ints[1]);
+
     learner->learn (elit);
     learner->learn (0);
   } else
     LOG ("not exporting learned unit clause");
 }
 
-void External::export_learned_large_clause (const vector<int> & clause, int glue) {
+void External::export_learned_large_clause (clause_id_t clause_id, const vector<int> & clause, int glue) {
   assert (learner);
   size_t size = clause.size ();
   assert (size <= (unsigned) INT_MAX);
-  if (learner->learning ((int) size)) {
+  //size + 2:  size literals + 2 metadata ints for clause ID
+  if (learner->learning ((int) size + 2)) {
     LOG ("exporting learned clause of size %zu", size);
     learner->learn (glue);
+
+    //produce two ints for exporting clause ID and export before clause
+    int clause_id_ints[2];
+    memcpy(clause_id_ints, &clause_id, sizeof(int64_t));
+    learner->learn (clause_id_ints[0]);
+    learner->learn (clause_id_ints[1]);
+
+    //export literals of clause
     for (auto ilit : clause) {
       const int elit = internal->externalize (ilit);
       assert (elit);

@@ -814,9 +814,12 @@ void Internal::analyze () {
     if (opts.bump)
       bump_variables();
 
-    if (external->learner) external->export_learned_large_clause (clause, glue);
-  } else if (external->learner)
-    external->export_learned_unit_clause(-uip);
+    if (external->learner){
+      external->export_learned_large_clause (reason->id, clause, glue);
+    }
+  } else if (external->learner){
+      external->export_learned_unit_clause(reason->id, -uip);
+  }
 
   // Build the chain proof for the conflict.
   build_chain ();
