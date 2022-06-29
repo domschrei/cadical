@@ -155,8 +155,6 @@ struct Internal {
   clause_id_t original_count;   // count of original clauses
   clause_id_t total_originals;  // total number of original clauses in the problem
   clause_id_t learned_count;    // count of learned clauses
-  int total_instances = 1;      // total number of instances running
-  int instance_num = 1;         // which of those instances this is
   Phases phases;                // saved, target and best phases
   signed char * vals;           // assignment [-max_var,max_var]
   vector<signed char> marks;    // signed marks [1,max_var]
@@ -262,7 +260,7 @@ struct Internal {
   // Should not be used for original clauses.
   //
   clause_id_t next_clause_id () {
-    return total_originals + instance_num + total_instances * learned_count++;
+      return total_originals + opts.get("instance_num") + opts.get("total_instances") * learned_count++;
   }
 
   // Enlarge tables.

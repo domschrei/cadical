@@ -370,13 +370,15 @@ int App::main (int argc, char ** argv) {
       if (++i == argc) APPERR ("argument to '--instance-num' missing");
       else if (!parse_int_str (argv[i], instance_num))
           APPERR ("invalid argument in '--instance-num %s'", argv[i]);
-      solver->set_instance_num(instance_num);
+      //solver->set_instance_num(instance_num);
+      solver->set("instance_num", instance_num);
     } else if (!strcmp (argv[i], "--total-instances")) {
       int total_instances = 0;
       if (++i == argc) APPERR ("argument to '--total-instances' missing");
       else if (!parse_int_str (argv[i], total_instances))
         APPERR ("invalid argument in '--total-instances %s'", argv[i]);
-      solver->set_total_instances(total_instances);
+      //solver->set_total_instances(total_instances);
+      solver->set("total_instances", total_instances);
     } else if (!strcmp (argv[i], "-")) {
       if (proof_specified) APPERR ("too many arguments");
       else if (!dimacs_specified) dimacs_specified = true;
@@ -530,10 +532,10 @@ int App::main (int argc, char ** argv) {
       proof_specified = true;
       if (!force_writing &&
           most_likely_existing_cnf_file (proof_path))
-        APPERR ("DRAT proof file '%s' most likely existing CNF (use '-f')",
+        APPERR ("FRAT proof file '%s' most likely existing CNF (use '-f')",
           proof_path);
       else if (!File::writable (proof_path))
-        APPERR ("DRAT proof file '%s' not writable", proof_path);
+        APPERR ("FRAT proof file '%s' not writable", proof_path);
     } else dimacs_specified = true, dimacs_path = argv[i];
   }
 

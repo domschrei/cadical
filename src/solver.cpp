@@ -445,20 +445,6 @@ int Solver::get (const char * arg) {
   return internal->opts.get (arg);
 }
 
-void Solver::set_total_instances (int val) {
-  TRACE ("set_total_instances", val);
-  REQUIRE_VALID_STATE ();
-  internal->total_instances = val;
-  LOG_API_CALL_END ("set_total_instances", val);
-}
-
-void Solver::set_instance_num (int val) {
-  TRACE ("set_instance_num", val);
-  REQUIRE_VALID_STATE ();
-  internal->instance_num = val;
-  LOG_API_CALL_END ("set_instance_num", val);
-}
-
 bool Solver::set (const char * arg, int val) {
   TRACE ("set", arg, val);
   REQUIRE_VALID_STATE ();
