@@ -105,6 +105,7 @@ OPTION( lrat,              1,  0,  1,0,0,0, "use (approximate) LRAT proof format
 OPTION( lucky,             1,  0,  1,0,0,1, "search for lucky phases")  \
 OPTION( minimize,          1,  0,  1,0,0,1, "minimize learned clauses") \
 OPTION( minimizedepth,   1e3,  0,1e3,0,0,1, "minimization depth") \
+OPTION( num_original_clauses,0,0,2e9,0,0,1, "number of clauses in the problem") \
 OPTION( phase,             1,  0,  1,0,0,1, "initial phase") \
 OPTION( probe,             0,  0,  1,0,1,1, "failed literal probing" ) \
 OPTION( probehbr,          1,  0,  1,0,0,1, "learn hyper binary clauses") \

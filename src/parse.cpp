@@ -165,7 +165,7 @@ const char * Parser::parse_dimacs_non_profiled (int & vars, int strict) {
       MSG ("found %s'p cnf %d %d'%s header",
         tout.green_code (), vars, clauses, tout.normal_code ());
 
-      solver->internal->total_originals = clauses;
+      solver->set("num_original_clauses", clauses);
 
       if (strict != FORCED)
         solver->reserve (vars);
