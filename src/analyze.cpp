@@ -33,7 +33,7 @@ void Internal::learn_unit_clause (int lit) {
     int eidx = i2e[abs (lit)];
     LOG ("learned unit clause [%ld] %d (external %d)", id, lit, eidx);
     external->set_unit_id (eidx, id);
-    proof->add_derived_unit_clause (id, lit);
+    proof->add_derived_unit_clause (id, lit, false);
   } else {
     LOG ("learned unit clause [%ld] %d", id, lit);
   }

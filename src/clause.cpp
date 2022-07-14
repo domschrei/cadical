@@ -379,7 +379,7 @@ void Internal::add_new_original_clause (clause_id_t id) {
         if (proof) {
           out_to_proof = true;
           PROOF_TODO (proof, "minified original clause", 30); // TODO(Mario)
-          proof->add_derived_clause (cid, clause);
+          proof->add_derived_clause (cid, clause, false);
           proof->delete_clause (id, original);
         }
       }
@@ -392,7 +392,7 @@ void Internal::add_new_original_clause (clause_id_t id) {
       external->check_learned_clause ();
       if (proof && !out_to_proof) {
         PROOF_TODO (proof, "minified original clause", 30); // TODO(Mario)
-        proof->add_derived_clause (cid, clause);
+        proof->add_derived_clause (cid, clause, false);
         proof->delete_clause (id, original);
       }
     }
@@ -414,7 +414,7 @@ Clause * Internal::new_learned_redundant_clause (int glue) {
 #endif
   external->check_learned_clause ();
   Clause * res = new_clause (0, true, glue);
-  if (proof) proof->add_derived_clause (res);
+  if (proof) proof->add_derived_clause (res, false);
   assert (watching ());
   watch_clause (res);
   return res;
@@ -425,7 +425,7 @@ Clause * Internal::new_learned_redundant_clause (int glue) {
 Clause * Internal::new_hyper_binary_resolved_clause (bool red, int glue) {
   external->check_learned_clause ();
   Clause * res = new_clause (0, red, glue);
-  if (proof) proof->add_derived_clause (res);
+  if (proof) proof->add_derived_clause (res, false);
   assert (watching ());
   watch_clause (res);
   return res;
@@ -437,7 +437,7 @@ Clause * Internal::new_hyper_ternary_resolved_clause (bool red) {
   external->check_learned_clause ();
   size_t size = clause.size ();
   Clause * res = new_clause (0, red, size);
-  if (proof) proof->add_derived_clause (res);
+  if (proof) proof->add_derived_clause (res, false);
   assert (!watching ());
   return res;
 }
@@ -450,7 +450,7 @@ Clause * Internal::new_clause_as (const Clause * orig) {
   const int new_glue = orig->glue;
   Clause * res = new_clause (0, orig->redundant, new_glue);
   assert (!orig->redundant || !orig->keep || res->keep);
-  if (proof) proof->add_derived_clause (res);
+  if (proof) proof->add_derived_clause (res, false);
   assert (watching ());
   watch_clause (res);
   return res;
@@ -462,7 +462,7 @@ Clause * Internal::new_clause_as (const Clause * orig) {
 Clause * Internal::new_resolved_irredundant_clause () {
   external->check_learned_clause ();
   Clause * res = new_clause (0, false);
-  if (proof) proof->add_derived_clause (res);
+  if (proof) proof->add_derived_clause (res, false);
   assert (!watching ());
   return res;
 }

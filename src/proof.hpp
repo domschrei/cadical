@@ -27,7 +27,7 @@ class Proof {
   void add_literals (const vector<int> &);      // ditto
 
   void add_original_clause (clause_id_t); // notify observers of original clauses
-  void add_derived_clause (clause_id_t);  // notify observers of derived clauses
+  void add_derived_clause (clause_id_t, bool);  // notify observers of derived clauses, bool is_imported
   void delete_clause (clause_id_t);       // notify observers of deleted clauses
   void finalize_clause (clause_id_t);     // notify observers of active clauses
 
@@ -45,9 +45,9 @@ public:
   // Add derived (such as learned) clauses to the proof.
   //
   void add_derived_empty_clause (clause_id_t id);
-  void add_derived_unit_clause (clause_id_t id, int unit);
-  void add_derived_clause (Clause *);
-  void add_derived_clause (clause_id_t id, const vector<int> &);
+  void add_derived_unit_clause (clause_id_t id, int unit, bool); //bool is_imported
+  void add_derived_clause (Clause *, bool); //bool is_imported
+  void add_derived_clause (clause_id_t id, const vector<int> &, bool); //bool is_imported
 
   void delete_clause (clause_id_t, const vector<int> &);
   void delete_clause (Clause *);

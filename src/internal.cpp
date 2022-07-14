@@ -308,7 +308,7 @@ void Internal::import_redundant_clauses (int& res) {
         //printf("Learn non-unit clause\n");
         external->check_learned_clause ();
         Clause * res = new_clause (clause_id, true, glue); //TODO imported clause ID
-        if (proof) proof->add_derived_clause (res);
+        if (proof) proof->add_derived_clause (res, true);
         assert (watching ());
         watch_clause (res);
         unitLit = 0;
