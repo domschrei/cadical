@@ -208,7 +208,7 @@ void Proof::add_derived_clause (clause_id_t id) {
   LOG (clause, "PROOF adding derived external clause");
   vector<clause_id_t> * chain = internal->chain.empty () ? 0 : &internal->chain;
   for (size_t i = 0; i < observers.size (); i++)
-    observers[i]->add_derived_clause (id, chain, clause);
+    observers[i]->add_derived_clause (id, chain, clause, true);
   internal->chain.clear ();
   clause.clear ();
 }

@@ -19,7 +19,8 @@ public:
 
   // Notify the observer that a new clause has been derived.
   //
-  virtual void add_derived_clause (clause_id_t, const vector<clause_id_t> *, const vector<int> &) { }
+  // bool arg is whether the clause is imported
+  virtual void add_derived_clause (clause_id_t, const vector<clause_id_t> *, const vector<int> &, bool) { }
 
   // Notify the observer that a clause is not used anymore.
   //

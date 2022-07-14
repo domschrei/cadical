@@ -24,7 +24,7 @@ public:
   ~Tracer ();
 
   void add_original_clause (clause_id_t, const vector<int> &);
-  void add_derived_clause (clause_id_t, const vector<clause_id_t> *, const vector<int> &);
+  void add_derived_clause (clause_id_t, const vector<clause_id_t> *, const vector<int> &, bool);
   void delete_clause (clause_id_t, const vector<int> &);
   void finalize_clause (clause_id_t, const vector<int> &);
   void add_todo (const vector<int64_t> &);
