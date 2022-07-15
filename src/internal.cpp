@@ -47,6 +47,8 @@ Internal::Internal ()
   vars (this->max_var),
   lits (this->max_var)
 {
+  original_count = 0;
+  learned_count = 0;
   control.push_back (Level (0, 0));
 }
 
