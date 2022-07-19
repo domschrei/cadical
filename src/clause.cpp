@@ -379,7 +379,7 @@ void Internal::add_new_original_clause (clause_id_t id) {
         if (proof) {
           out_to_proof = true;
           PROOF_TODO (proof, "minified original clause", 30); // TODO(Mario)
-          proof->add_derived_clause (cid, clause, false);
+          proof->add_derived_clause (cid, clause, false, -1);
           proof->delete_clause (id, original);
         }
       }
@@ -392,7 +392,7 @@ void Internal::add_new_original_clause (clause_id_t id) {
       external->check_learned_clause ();
       if (proof && !out_to_proof) {
         PROOF_TODO (proof, "minified original clause", 30); // TODO(Mario)
-        proof->add_derived_clause (cid, clause, false);
+        proof->add_derived_clause (cid, clause, false, -1);
         proof->delete_clause (id, original);
       }
     }

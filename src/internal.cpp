@@ -309,7 +309,7 @@ void Internal::import_redundant_clauses (int& res) {
       if (clause.size () >= 2) {
         //printf("Learn non-unit clause\n");
         external->check_learned_clause ();
-        Clause * res = new_clause (clause_id, true, glue); //TODO imported clause ID
+        Clause * res = new_clause (clause_id, true, glue);
         if (proof) proof->add_derived_clause (res, true);
         assert (watching ());
         watch_clause (res);
@@ -335,7 +335,7 @@ void Internal::import_redundant_clauses (int& res) {
       // Do not import units which are already fixed
       if (f.status == Flags::FIXED) continue;
       // Actually add the unit clause
-      if (add) assign_original_unit (0, ilit); //TODO determine if this is imported or new in this instance
+      if (add) assign_original_unit (clause_id, ilit);
     }
 
     // Stop importing if SAT or UNSAT was found

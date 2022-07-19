@@ -83,14 +83,14 @@ void Proof::add_original_clause (clause_id_t id, const vector<int> & c) {
 void Proof::add_derived_empty_clause (clause_id_t id) {
   LOG ("PROOF adding empty clause [%ld]", id);
   assert (clause.empty ());
-  add_derived_clause (id, false);
+  add_derived_clause (id, false, 0);
 }
 
 void Proof::add_derived_unit_clause (clause_id_t id, int internal_unit, bool is_imported) {
   LOG ("PROOF adding unit clause [%ld] %d", id, internal_unit);
   assert (clause.empty ());
   add_literal (internal_unit);
-  add_derived_clause (id, is_imported);
+  add_derived_clause (id, is_imported, 0);
 }
 
 /*------------------------------------------------------------------------*/
@@ -99,15 +99,15 @@ void Proof::add_derived_clause (Clause * c, bool is_imported) {
   LOG (c, "PROOF adding to proof derived");
   assert (clause.empty ());
   add_literals (c);
-  add_derived_clause (c->id, is_imported);
+  add_derived_clause (c->id, is_imported, c->glue);
 }
 
-void Proof::add_derived_clause (clause_id_t id, const vector<int> & c, bool is_imported) {
+    void Proof::add_derived_clause (clause_id_t id, const vector<int> & c, bool is_imported, int glue) {
   LOG (internal->clause, "PROOF adding derived clause [%ld]", id);
   assert (clause.empty ());
   for (const auto & lit : c)
     add_literal (lit);
-  add_derived_clause (id, is_imported);
+  add_derived_clause (id, is_imported, glue);
 }
 
 void Proof::delete_clause (Clause * c) {
@@ -170,7 +170,7 @@ void Proof::flush_clause (Clause * c) {
   }
   internal->chain.push_back(c->id);
   clause_id_t id = internal->next_clause_id();
-  add_derived_clause (id, false);
+  add_derived_clause (id, false, c->glue);
   delete_clause (c);
   c->id = id;
 }
@@ -190,7 +190,7 @@ void Proof::strengthen_clause (Clause * c, int remove) {
     add_literal (internal_lit);
   }
   clause_id_t id = internal->next_clause_id();
-  add_derived_clause (id, false);
+  add_derived_clause (id, false, c->glue);
   delete_clause (c);
   c->id = id;
 }
@@ -204,11 +204,11 @@ void Proof::add_original_clause (clause_id_t id) {
   clause.clear ();
 }
 
-void Proof::add_derived_clause (clause_id_t id, bool is_imported) {
+void Proof::add_derived_clause (clause_id_t id, bool is_imported, int glue) {
   LOG (clause, "PROOF adding derived external clause");
   vector<clause_id_t> * chain = internal->chain.empty () ? 0 : &internal->chain;
   for (size_t i = 0; i < observers.size (); i++)
-    observers[i]->add_derived_clause (id, chain, clause, is_imported);
+      observers[i]->add_derived_clause (id, chain, clause, is_imported, glue);
   internal->chain.clear ();
   clause.clear ();
 }

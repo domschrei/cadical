@@ -12,15 +12,13 @@ public:
   Observer () { }
   virtual ~Observer () { }
 
-  // An online proof 'Checker' needs to know original clauses too while a
-  // proof 'Tracer' will not implement this function.
-  //
   virtual void add_original_clause (clause_id_t, const vector<int> &) { }
 
   // Notify the observer that a new clause has been derived.
   //
   // bool arg is whether the clause is imported
-  virtual void add_derived_clause (clause_id_t, const vector<clause_id_t> *, const vector<int> &, bool) { }
+  // int arg is glue if non-unit, ignored if unit
+  virtual void add_derived_clause (clause_id_t, const vector<clause_id_t> *, const vector<int> &, bool, int) { }
 
   // Notify the observer that a clause is not used anymore.
   //

@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include "learnerobserver.hpp"
 
 /*------------------------------------------------------------------------*/
 
@@ -718,6 +719,8 @@ void Solver::connect_learner (Learner * learner) {
     LOG ("connecting new learner (no previous one)");
 #endif
   external->learner = learner;
+  LearnerObserver *lo = new LearnerObserver (external);
+  external->internal->proof->connect(lo);
   LOG_API_CALL_END ("connect_learner");
 }
 
