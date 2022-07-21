@@ -1,6 +1,8 @@
 #ifndef _proof_h_INCLUDED
 #define _proof_h_INCLUDED
 
+#include "tracer.hpp"
+
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
@@ -37,6 +39,9 @@ public:
   ~Proof ();
 
   void connect (Observer * v) { observers.push_back (v); }
+  //we want the tracer to go before exporting to ensure the proof is written,
+  //   so we put it at the beginning
+  void connect_tracer (Tracer *t) { observers.insert(observers.begin(), t); }
 
   // Add original clauses to the proof (for online proof checking).
   //
