@@ -96,6 +96,10 @@ void Tracer::add_derived_clause (clause_id_t id, const vector<int64_t> * chain, 
   if (binary) put_binary_zero ();
   else file->put ("0\n");
   added++;
+  //make sure the empty clause gets fully output here
+  if (clause.size() == 0){
+      flush();
+  }
 }
 
 void Tracer::delete_clause (clause_id_t id, const vector<int> & clause) {

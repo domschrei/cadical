@@ -22,7 +22,9 @@ void Internal::trace (File * file) {
   new_proof_on_demand ();
   tracer = new Tracer (this, file, opts.binary, opts.lrat);
   LOG ("PROOF connecting proof tracer");
-  proof->connect (tracer);
+  //we want the tracer to go before exporting to ensure it is written,
+  //   so we put it at the beginning
+  proof->observers.insert(0, tracer);
 }
 
 // Enable proof checking.
