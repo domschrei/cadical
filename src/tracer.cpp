@@ -73,7 +73,7 @@ void Tracer::add_original_clause (clause_id_t id, const vector<int> & clause) {
   else file->put ("0\n");
 }
 
-void Tracer::add_derived_clause (clause_id_t id, const vector<int64_t> * chain, const vector<int> & clause, bool is_imported, int glue) {
+void Tracer::add_derived_clause (clause_id_t id, const vector<int64_t> * chain, const vector<int> & clause, bool is_imported) {
   if (is_imported) { return; } //don't put imported clauses in proof file
   if (file->closed ()) return;
   LOG ("TRACER tracing addition of derived clause");

@@ -16,9 +16,14 @@ public:
 
   // Notify the observer that a new clause has been derived.
   //
-  // bool arg is whether the clause is imported
-  // int arg is glue if non-unit, ignored if unit
-  virtual void add_derived_clause (clause_id_t, const vector<clause_id_t> *, const vector<int> &, bool, int) { }
+  // glue is ignored if clause is unit
+  virtual void add_derived_clause (clause_id_t id, const vector<clause_id_t> *chain, const vector<int> &lits, bool is_imported, int) {
+      add_derived_clause(id, chain, lits, is_imported);
+  }
+  virtual void add_derived_clause (clause_id_t id, const vector<clause_id_t> *chain, const vector<int> &lits, bool) {
+      add_derived_clause(id, chain, lits);
+  }
+  virtual void add_derived_clause (clause_id_t, const vector<clause_id_t> *, const vector<int> &) { }
 
   // Notify the observer that a clause is not used anymore.
   //

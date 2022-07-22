@@ -508,7 +508,7 @@ void Checker::add_original_clause (int64_t id, const vector<int> & c) {
   STOP (checking);
 }
 
-void Checker::add_derived_clause (int64_t id, const vector<int64_t> * chain, const vector<int> & c, bool is_imported, int glue) {
+void Checker::add_derived_clause (int64_t id, const vector<int64_t> * chain, const vector<int> & c) {
   if (inconsistent) return;
   START (checking);
   LOG (c, "CHECKER addition of derived clause");
