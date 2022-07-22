@@ -520,9 +520,10 @@ void External::export_learned_unit_clause (clause_id_t clause_id, int ilit) {
     const int elit = internal->externalize (ilit);
     assert (elit);
 
-    //produce two ints for exporting clause ID and export before clause
+    //produce two ints for exporting clause ID as uint64 and export before clause
+    uint64_t u_clause_id = (uint64_t) clause_id;
     int clause_id_ints[2];
-    memcpy(clause_id_ints, &clause_id, sizeof(int64_t));
+    memcpy(clause_id_ints, &u_clause_id, sizeof(uint64_t));
     learner->learn (clause_id_ints[0]);
     learner->learn (clause_id_ints[1]);
 
@@ -541,9 +542,10 @@ void External::export_learned_large_clause (clause_id_t clause_id, const vector<
     LOG ("exporting learned clause of size %zu", size);
     learner->learn (glue);
 
-    //produce two ints for exporting clause ID and export before clause
+    //produce two ints for exporting clause ID as uint64 and export before clause
+    uint64_t u_clause_id = (uint64_t) clause_id;
     int clause_id_ints[2];
-    memcpy(clause_id_ints, &clause_id, sizeof(int64_t));
+    memcpy(clause_id_ints, &u_clause_id, sizeof(uint64_t));
     learner->learn (clause_id_ints[0]);
     learner->learn (clause_id_ints[1]);
 

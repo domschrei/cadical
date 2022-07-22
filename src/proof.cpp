@@ -207,7 +207,7 @@ void Proof::add_original_clause (clause_id_t id) {
 void Proof::add_derived_clause (clause_id_t id, bool is_imported, int glue) {
   LOG (clause, "PROOF adding derived external clause");
   vector<clause_id_t> * chain = internal->chain.empty () ? 0 : &internal->chain;
-  if (clause.size() < glue){
+  if ((int) clause.size() < glue){
       //fix glue size so it is not smaller than the clause size
       glue = clause.size();
   }

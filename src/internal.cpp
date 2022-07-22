@@ -242,17 +242,27 @@ void Internal::import_redundant_clauses (int& res) {
     auto cls = external->learnSource->getNextClause ();
     assert (cls.size() >= 3); //must have ID (2) + at least one literal (1)
 
+    //Conversion code and assertions due to Dominik
+    uint64_t u_clause_id;
     clause_id_t clause_id;
     if (cls.size() == 3){
       //Unit clause:  two ints for ID, one literal
-      clause_id = *((clause_id_t *) cls.data());
+      memcpy(&u_clause_id, cls.data(), sizeof(clause_id_t));
       cls.erase(cls.begin(), cls.begin() + 2);
     }
     else{
       //Non-unit clause:  LBD score, two ints for ID, literals
-      clause_id = *((clause_id_t *) cls.data() + 1);
+      memcpy(&u_clause_id, cls.data() + 1, sizeof(clause_id_t));
       cls.erase(cls.begin() + 1, cls.begin() + 3);
     }
+    clause_id = (clause_id_t) u_clause_id;
+
+    assert (u_clause_id < std::numeric_limits<uint64_t>::max() / 2 ||
+            [&](){printf("Too large clause ID %lu!\n", clause_id_ul); return false;}()
+    );
+    assert(clause_id > 0 || 
+           [&](){printf("Illegal clause ID %ld!\n", clause_id); return false;}()
+    );
 
     size_t size = cls.size ();
     //printf("Import clause of size %lu\n", size);
