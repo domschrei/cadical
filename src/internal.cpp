@@ -258,7 +258,7 @@ void Internal::import_redundant_clauses (int& res) {
     clause_id = (clause_id_t) u_clause_id;
 
     assert (u_clause_id < std::numeric_limits<uint64_t>::max() / 2 ||
-            [&](){printf("Too large clause ID %lu!\n", clause_id_ul); return false;}()
+            [&](){printf("Too large clause ID %lu!\n", u_clause_id); return false;}()
     );
     assert(clause_id > 0 || 
            [&](){printf("Illegal clause ID %ld!\n", clause_id); return false;}()
