@@ -215,7 +215,6 @@ void Proof::add_derived_clause (clause_id_t id, bool is_imported, int glue) {
       //fix glue size so it is at least the clause size
       glue = 1;
   }
-  printf("Exporting %lld from %d\n", id, internal->opts.get("instance_num"));
   for (size_t i = 0; i < observers.size (); i++)
       observers[i]->add_derived_clause (id, chain, clause, is_imported, glue);
   internal->chain.clear ();
