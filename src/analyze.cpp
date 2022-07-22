@@ -375,8 +375,8 @@ struct analyze_trail_larger {
 // Fill the 'chain' variable with the LRAT style unit propagation proof of
 // newly learnt clause
 
-static vector<signed char> justified;
-static vector<Clause*> old_reasons;
+//static vector<signed char> justified;
+//static vector<Clause*> old_reasons;
 
 void Internal::justify_lit (int lit) {
   Flags & f = flags (lit);
@@ -403,6 +403,8 @@ void Internal::justify_lit (int lit) {
 }
 
 void Internal::build_chain () {
+  //old_reasons moved here from global above
+  vector<Clause*> old_reasons;
   if (!opts.lrat) return;
   assert (conflict), assert (chain.empty ());
   for (const auto & lit : clause) {
