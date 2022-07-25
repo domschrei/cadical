@@ -237,12 +237,113 @@ void Internal::import_redundant_clauses (int& res) {
 
   // Import external clauses.
   while (external->learnSource->hasNextClause ()) {
-
     // Fetch pointer to 1st literal and size of the clause (plus glue)
     auto cls = external->learnSource->getNextClause ();
     assert (cls.size() >= 3); //must have ID (2) + at least one literal (1)
 
-    //Conversion code and assertions due to Dominik
+    clause_id_t clause_id = convert_imported_clause_id(cls);
+    size_t size = cls.size ();
+    assert (size > 0);
+    int unitLit = size == 1 ? cls[0] : 0;
+    assert (clause.empty ());
+    bool addClause = true;
+
+    // Learn non-unit clause
+    if (unitLit == 0) {
+      // Glue int at the front
+      int glue = cls[0];
+      assert (glue > 0);
+
+      // Analyze clause literals
+      addClause = check_non_unit_clause_import(cls, size, &unitLit);
+      // Handle clause of size >= 2 being learnt (after processing)
+      // (unit clauses are handled below)
+      if (addClause && clause.size () >= 2) {
+          external->check_learned_clause ();
+          Clause * result_clause = new_clause (clause_id, true, glue);
+          if (proof) proof->add_derived_clause (result_clause, true);
+          assert (watching ());
+          watch_clause (result_clause);
+          unitLit = 0;
+      }
+      clause.clear();
+    }
+
+    // Try to learn unit clause
+    if (addClause && unitLit != 0) {
+      // Do not learn unit clause if marked as witness
+      if (!external->marked (external->witness, unitLit)) {
+          int ilit = external->internalize (unitLit);
+          auto& f = flags(ilit);
+          // Do not import eliminated or substituted literal, or units that are already fixed
+          if (!(f.eliminated () || f.substituted ()) and f.status != Flags::FIXED){
+              assign_original_unit (clause_id, ilit);
+          }
+      }
+    }
+
+    // Stop importing if SAT or UNSAT was found
+    if (unsat) {
+      res = 20;
+      return;
+    }
+    if (satisfied ()) {
+      res = 10;
+      return;
+    }
+  }
+}
+
+
+//Check whether we can add a non-unit imported clause to our set of clauses
+//Also, set unitLit appropriately based on reductions
+bool Internal::check_non_unit_clause_import(std::vector<int> cls, size_t size, int *unitLit){
+    for (size_t i = 1; i < size; i++) { //start at 1 to skip glue
+        int elit = cls[i];
+        assert (elit != 0);
+
+        if (external->marked (external->witness, elit)) {
+            // Literal marked as witness: Cannot import
+            return false;
+        }
+
+        //fake external->internalize to avoid side effects until know we will add it
+        int ilit;
+        int eidx = abs(elit);
+        if (eidx <= external->max_var){
+            ilit = external->e2i[eidx];
+        }
+        else{
+            ilit = 0;
+        }
+
+        auto& f = flags (ilit);
+        if (f.eliminated ()) {
+            // Literal has been eliminated: do not add this clause.
+            return false;
+        } else if (f.fixed ()) {
+            // Literal is fixed
+            if (val (ilit) == 1) {
+                // TRUE: Clause can be omitted.
+                return false;
+            } // else: FALSE - literal can be omitted.
+        } else {
+            // Active, pure, or substituted: Can treat literal normally.
+            clause.push_back (ilit);
+            *unitLit = elit;
+        }
+    }
+    //now that we know we want to add it, officially internalize all the lits
+    for (size_t i = 1; i < size; i++){
+        external->internalize(cls[i]);
+    }
+    return true;
+}
+
+
+//Convert to the clause ID and also remove the clause ID from cls
+clause_id_t Internal::convert_imported_clause_id(std::vector<int>& cls){
+    //Conversion code and assertions due to Dominik Schreiber
     uint64_t u_clause_id;
     clause_id_t clause_id;
     if (cls.size() == 3){
@@ -258,106 +359,13 @@ void Internal::import_redundant_clauses (int& res) {
     clause_id = (clause_id_t) u_clause_id;
 
     assert (u_clause_id < std::numeric_limits<uint64_t>::max() / 2 ||
-            [&](){printf("Too large clause ID %lu!\n", u_clause_id); return false;}()
+            [&](){printf("Too large clause ID %" PRIu64 "!\n", u_clause_id); return false;}()
     );
     assert(clause_id > 0 || 
-           [&](){printf("Illegal clause ID %ld!\n", clause_id); return false;}()
+           [&](){printf("Illegal clause ID %" PRId64 "!\n", clause_id); return false;}()
     );
 
-    size_t size = cls.size ();
-    //printf("Import clause of size %lu\n", size);
-    assert (size > 0);
-    int unitLit = size == 1 ? cls[0] : 0;
-    assert (clause.empty ());
-
-    if (unitLit == 0) {
-      // Learn non-unit clause
-
-      // Glue int at the front
-      int glue = cls[0];
-      assert (glue > 0);
-
-      // Analyze clause literals
-      bool addClause = true;
-      for (size_t i = 1; i < size; i++) {
-
-        int elit = cls[i];
-        assert (elit != 0);
-
-        if (external->marked (external->witness, elit)) {
-          // Literal marked as witness: Cannot import
-          addClause = false; break;
-        }
-
-        int ilit = external->internalize(elit);
-
-        auto& f = flags (ilit);
-        if (f.eliminated ()) {
-          // Literal has been eliminated: do not add this clause.
-          addClause = false; break;
-        } else if (f.fixed ()) {
-          // Literal is fixed
-          if (val (ilit) == 1) {
-            // TRUE: Clause can be omitted.
-            addClause = false; break;
-          } // else: FALSE - literal can be omitted.
-        } else {
-          // Active, pure, or substituted: Can treat literal normally.
-          clause.push_back (ilit);
-          unitLit = elit;
-        }
-      }
-
-      if (!addClause) {
-        //printf("Discard clause\n");
-        clause.clear ();
-        continue;
-      }
-
-      // Handle clause of size >= 2 being learnt
-      // (unit clauses are handled below)
-      if (clause.size () >= 2) {
-        //printf("Learn non-unit clause\n");
-        external->check_learned_clause ();
-        Clause * res = new_clause (clause_id, true, glue);
-        if (proof) proof->add_derived_clause (res, true);
-        assert (watching ());
-        watch_clause (res);
-        unitLit = 0;
-      }
-
-      clause.clear ();
-    }
-
-    // Try to learn unit clause
-    if (unitLit != 0) {
-      bool add = true;
-      if (external->marked (external->witness, unitLit)) {
-        // Do not learn unit clause if marked as witness
-        continue;
-      }
-      int ilit = external->internalize (unitLit);
-      auto& f = flags(ilit);
-      if (f.eliminated () || f.substituted ()) {
-        // Do not import eliminated or substituted literal
-        continue;
-      }
-      // Do not import units which are already fixed
-      if (f.status == Flags::FIXED) continue;
-      // Actually add the unit clause
-      if (add) assign_original_unit (clause_id, ilit);
-    }
-
-    // Stop importing if SAT or UNSAT was found
-    if (unsat) {
-      res = 20;
-      return;
-    }
-    if (satisfied ()) {
-      res = 10;
-      return;
-    }
-  }
+    return clause_id;
 }
 
 /*------------------------------------------------------------------------*/

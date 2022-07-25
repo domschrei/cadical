@@ -957,6 +957,8 @@ struct Internal {
     // Import learnt clauses from an external source.
     bool importing ();
     void import_redundant_clauses (int& res);
+    clause_id_t convert_imported_clause_id (std::vector<int>& cls);
+    bool check_non_unit_clause_import(std::vector<int> cls, size_t size, int *unitLit);
 
     // Forcing decision variables to a certain phase.
     //
