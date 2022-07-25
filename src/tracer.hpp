@@ -1,6 +1,7 @@
 #ifndef _tracer_h_INCLUDED
 #define _tracer_h_INCLUDED
 
+#include <stdexcept>
 #include "observer.hpp" // Alphabetically after 'tracer'.
 
 // Proof tracing to a file (actually 'File') in DRAT format.
