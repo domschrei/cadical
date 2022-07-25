@@ -307,15 +307,9 @@ bool Internal::check_non_unit_clause_import(std::vector<int> cls, size_t size, i
             return false;
         }
 
-        //fake external->internalize to avoid side effects until know we will add it
-        int ilit;
-        int eidx = abs(elit);
-        if (eidx <= external->max_var){
-            ilit = external->e2i[eidx];
-        }
-        else{
-            ilit = 0;
-        }
+        //The only side effects of this are to increase the mapping between internal and external.
+        //Therefore it doesn't matter if we internalize something that isn't going to be imported.
+        int ilit = external->internalize(ilit);
 
         auto& f = flags (ilit);
         if (f.eliminated ()) {
@@ -332,10 +326,6 @@ bool Internal::check_non_unit_clause_import(std::vector<int> cls, size_t size, i
             clause.push_back (ilit);
             *unitLit = elit;
         }
-    }
-    //now that we know we want to add it, officially internalize all the lits
-    for (size_t i = 1; i < size; i++){
-        external->internalize(cls[i]);
     }
     return true;
 }

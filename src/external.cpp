@@ -512,13 +512,11 @@ void External::export_learned_empty_clause () {
     LOG ("not exporting learned empty clause");
 }
 
-void External::export_learned_unit_clause (clause_id_t clause_id, int ilit) {
+void External::export_learned_unit_clause (clause_id_t clause_id, int elit) {
   assert (learner);
   //1 + 2:  1 literals + 2 metedata ints for clause ID
   if (learner->learning (1 + 2)) {
     LOG ("exporting learned unit clause");
-    const int elit = internal->externalize (ilit);
-    assert (elit);
 
     //produce two ints for exporting clause ID as uint64 and export before clause
     uint64_t u_clause_id = (uint64_t) clause_id;
@@ -527,6 +525,7 @@ void External::export_learned_unit_clause (clause_id_t clause_id, int ilit) {
     learner->learn (clause_id_ints[0]);
     learner->learn (clause_id_ints[1]);
 
+    //already externalized
     learner->learn (elit);
     learner->learn (0);
   } else
@@ -550,9 +549,8 @@ void External::export_learned_large_clause (clause_id_t clause_id, const vector<
     learner->learn (clause_id_ints[1]);
 
     //export literals of clause
-    for (auto ilit : clause) {
-      const int elit = internal->externalize (ilit);
-      assert (elit);
+    for (auto elit : clause) {
+      //already externalized
       learner->learn (elit);
     }
     learner->learn (0);
