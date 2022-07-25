@@ -309,7 +309,7 @@ bool Internal::check_non_unit_clause_import(std::vector<int> cls, size_t size, i
 
         //The only side effects of this are to increase the mapping between internal and external.
         //Therefore it doesn't matter if we internalize something that isn't going to be imported.
-        int ilit = external->internalize(ilit);
+        int ilit = external->internalize(elit);
 
         auto& f = flags (ilit);
         if (f.eliminated ()) {
