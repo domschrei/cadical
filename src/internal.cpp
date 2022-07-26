@@ -255,7 +255,7 @@ void Internal::import_redundant_clauses (int& res) {
       assert (glue > 0);
 
       // Analyze clause literals
-      addClause = check_non_unit_clause_import(cls, size, &unitLit);
+      addClause = check_non_unit_clause_import(cls, size, &unitLit, clause_id);
       // Handle clause of size >= 2 being learnt (after processing)
       // (unit clauses are handled below)
       if (addClause && clause.size () >= 2) {
@@ -297,14 +297,20 @@ void Internal::import_redundant_clauses (int& res) {
 
 //Check whether we can add a non-unit imported clause to our set of clauses
 //Also, set unitLit appropriately based on reductions
-bool Internal::check_non_unit_clause_import(std::vector<int> cls, size_t size, int *unitLit){
-    for (size_t i = 1; i < size; i++) { //start at 1 to skip glue
+bool Internal::check_non_unit_clause_import(std::vector<int> cls, size_t size, int *unitLit, clause_id_t id){
+    bool need_to_add = true;
+    //if there are falsified literals in the imported clause, we need
+    //   to create a new, simplified clause to add in its place
+    bool need_to_simplify = false;
+    chain.clear();
+    size_t i = 1; //start at 1 to skip glue
+    while (need_to_add && i < size){
         int elit = cls[i];
         assert (elit != 0);
 
         if (external->marked (external->witness, elit)) {
             // Literal marked as witness: Cannot import
-            return false;
+            need_to_add = false;
         }
 
         //The only side effects of this are to increase the mapping between internal and external.
@@ -314,20 +320,47 @@ bool Internal::check_non_unit_clause_import(std::vector<int> cls, size_t size, i
         auto& f = flags (ilit);
         if (f.eliminated ()) {
             // Literal has been eliminated: do not add this clause.
-            return false;
-        } else if (f.fixed ()) {
-            // Literal is fixed
+            need_to_add = false;
+        } else if (f.fixed ()){
             if (val (ilit) == 1) {
-                // TRUE: Clause can be omitted.
-                return false;
-            } // else: FALSE - literal can be omitted.
-        } else {
-            // Active, pure, or substituted: Can treat literal normally.
-            clause.push_back (ilit);
+                //fixed and true:  clause is already satisfied, and can be omitted
+                need_to_add = false;
+            }
+            else{
+                //clause is false and we need to simplify the clause to import it
+                need_to_simplify = true;
+                Var v = var(ilit);
+                chain.push_back(v.unit_id);
+            }
+        } else{
+            //only include non-fixed literals in the clause
+            clause.push_back(ilit);
             *unitLit = elit;
         }
+        i++;
     }
-    return true;
+    //if there were falsified literals and the clause is otherwise good,
+    //   add a new clause based on it
+    if (need_to_add && need_to_simplify){
+        chain.push_back(id);
+        clause_id_t new_id = next_clause_id();
+        size_t size = clause.size();
+        if (size == 0){
+            proof->add_derived_empty_clause(new_id);
+        }
+        else if (size == 1){
+            proof->add_derived_unit_clause(new_id, clause[0], false);
+        }
+        else{
+            //we don't have a glue value computed, so use the size
+            Clause *new_built_clause = new_clause(new_id, true, clause.size());
+            proof->add_derived_clause(new_built_clause, false);
+        }
+        //do not add the actual clause we read, since we replaced it
+        need_to_add = false;
+    }
+    chain.clear(); //anything in it was added by us, and we don't need it anymore
+    return need_to_add;
 }
 
 

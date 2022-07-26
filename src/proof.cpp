@@ -102,7 +102,7 @@ void Proof::add_derived_clause (Clause * c, bool is_imported) {
   add_derived_clause (c->id, is_imported, c->glue);
 }
 
-    void Proof::add_derived_clause (clause_id_t id, const vector<int> & c, bool is_imported, int glue) {
+void Proof::add_derived_clause (clause_id_t id, const vector<int> & c, bool is_imported, int glue) {
   LOG (internal->clause, "PROOF adding derived clause [%ld]", id);
   assert (clause.empty ());
   for (const auto & lit : c)
