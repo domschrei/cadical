@@ -80,10 +80,10 @@ void Proof::add_original_clause (clause_id_t id, const vector<int> & c) {
   add_original_clause (id);
 }
 
-void Proof::add_derived_empty_clause (clause_id_t id) {
+void Proof::add_derived_empty_clause (clause_id_t id, bool is_imported) {
   LOG ("PROOF adding empty clause [%ld]", id);
   assert (clause.empty ());
-  add_derived_clause (id, false, 0);
+  add_derived_clause (id, is_imported, 0);
 }
 
 void Proof::add_derived_unit_clause (clause_id_t id, int internal_unit, bool is_imported) {
@@ -212,7 +212,7 @@ void Proof::add_derived_clause (clause_id_t id, bool is_imported, int glue) {
       glue = clause.size();
   }
   else if (glue < 1){
-      //fix glue size so it is at least the clause size
+      //fix glue size so it is at least the minimum size
       glue = 1;
   }
   for (size_t i = 0; i < observers.size (); i++)

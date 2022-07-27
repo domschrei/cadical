@@ -264,9 +264,8 @@ void Internal::import_redundant_clauses (int& res) {
           if (proof) proof->add_derived_clause (result_clause, true);
           assert (watching ());
           watch_clause (result_clause);
-          unitLit = 0;
+          addClause = false; //now added, so don't add it again
       }
-      clause.clear();
     }
 
     // Try to learn unit clause
@@ -276,11 +275,14 @@ void Internal::import_redundant_clauses (int& res) {
           int ilit = external->internalize (unitLit);
           auto& f = flags(ilit);
           // Do not import eliminated or substituted literal, or units that are already fixed
-          if (!(f.eliminated () || f.substituted ()) and f.status != Flags::FIXED){
+          if (!f.eliminated () && !f.substituted () && !f.fixed()){
+              if (proof) proof->add_derived_unit_clause(clause_id, ilit, true);
               assign_original_unit (clause_id, ilit);
           }
       }
     }
+
+    clause.clear();
 
     // Stop importing if SAT or UNSAT was found
     if (unsat) {
@@ -346,15 +348,20 @@ bool Internal::check_non_unit_clause_import(std::vector<int> cls, size_t size, i
         clause_id_t new_id = next_clause_id();
         size_t size = clause.size();
         if (size == 0){
-            proof->add_derived_empty_clause(new_id);
+            unsat = true;
+            if (proof) proof->add_derived_empty_clause(new_id);
         }
         else if (size == 1){
-            proof->add_derived_unit_clause(new_id, clause[0], false);
+            if (proof) proof->add_derived_unit_clause(new_id, clause[0], false);
+            assign_original_unit(new_id, clause[0]);
         }
         else{
+            external->check_learned_clause ();
             //we don't have a glue value computed, so use the size
             Clause *new_built_clause = new_clause(new_id, true, clause.size());
-            proof->add_derived_clause(new_built_clause, false);
+            if (proof) proof->add_derived_clause(new_built_clause, false);
+            assert (watching());
+            watch_clause (new_built_clause);
         }
         //do not add the actual clause we read, since we replaced it
         need_to_add = false;

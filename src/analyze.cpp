@@ -25,15 +25,15 @@ void Internal::learn_empty_clause () {
   unsat = true;
 }
 
-void Internal::learn_unit_clause (int lit) {
-  clause_id_t id = next_clause_id();
+void Internal::learn_unit_clause (clause_id_t id, int lit, bool is_imported) {
+  id = id ? id : next_clause_id();
   external->check_learned_unit_clause (lit);
   if (proof) {
     var (lit).unit_id = id;
     int eidx = i2e[abs (lit)];
     LOG ("learned unit clause [%ld] %d (external %d)", id, lit, eidx);
     external->set_unit_id (eidx, id);
-    proof->add_derived_unit_clause (id, lit, false);
+    proof->add_derived_unit_clause (id, lit, is_imported);
   } else {
     LOG ("learned unit clause [%ld] %d", id, lit);
   }

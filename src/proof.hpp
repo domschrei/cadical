@@ -49,8 +49,9 @@ public:
 
   // Add derived (such as learned) clauses to the proof.
   //
-  void add_derived_empty_clause (clause_id_t id);
-  void add_derived_unit_clause (clause_id_t id, int unit, bool); //bool is_imported
+  void add_derived_empty_clause (clause_id_t id){ add_derived_empty_clause(id, false); }
+  void add_derived_empty_clause (clause_id_t id, bool is_imported);
+  void add_derived_unit_clause (clause_id_t id, int unit, bool is_imported);
   void add_derived_clause (Clause *, bool); //bool is_imported
   void add_derived_clause (clause_id_t id, const vector<int> &, bool, int); //bool is_imported, int glue
 

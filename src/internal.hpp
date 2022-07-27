@@ -555,7 +555,8 @@ struct Internal {
   // Learning from conflicts in 'analyze.cc'.
   //
   void learn_empty_clause ();
-  void learn_unit_clause (int lit);
+  void learn_unit_clause (int lit){ learn_unit_clause(0, lit, false); };
+  void learn_unit_clause (clause_id_t id, int lit, bool is_imported);
   void bump_variable (int lit);
   void bump_variables ();
   int recompute_glue (Clause *);
