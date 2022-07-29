@@ -242,47 +242,48 @@ void Internal::import_redundant_clauses (int& res) {
     assert (cls.size() >= 3); //must have ID (2) + at least one literal (1)
 
     clause_id_t clause_id = convert_imported_clause_id(cls);
-    size_t size = cls.size ();
-    assert (size > 0);
-    int unitLit = size == 1 ? cls[0] : 0;
+    assert (cls.size () > 0);
     assert (clause.empty ());
-    bool addClause = true;
+    int addClause = check_clause_import(cls);
 
-    // Learn non-unit clause
-    if (unitLit == 0) {
-      // Glue int at the front
-      int glue = cls[0];
-      assert (glue > 0);
+    // Check whether something should be added
+    if (addClause){
+        bool is_imported;
+        int glue;
+        if (addClause == 1){ // Imported
+            is_imported = true;
+            // Glue int at the front
+            glue = cls[0];
+            assert (glue > 0);
+        }
+        else{ // Simplified
+            is_imported = false;
+            // We don't have a glue computed, so use the size
+            glue = clause.size();
+            chain.push_back(clause_id); // Add imported clause to proof
+            clause_id = next_clause_id();
+        }
 
-      // Analyze clause literals
-      addClause = check_non_unit_clause_import(cls, size, &unitLit, clause_id);
-      // Handle clause of size >= 2 being learnt (after processing)
-      // (unit clauses are handled below)
-      if (addClause && clause.size () >= 2) {
-          external->check_learned_clause ();
-          Clause * result_clause = new_clause (clause_id, true, glue);
-          if (proof) proof->add_derived_clause (result_clause, true);
-          assert (watching ());
-          watch_clause (result_clause);
-          addClause = false; //now added, so don't add it again
-      }
+        size_t size = clause.size();
+        if (size == 0){
+            unsat = true;
+            if (proof) proof->add_derived_empty_clause(clause_id);
+        }
+        else if (size == 1){
+            if (proof) proof->add_derived_unit_clause(clause_id, clause[0], is_imported);
+            assign_original_unit(clause_id, clause[0]);
+        }
+        else{
+            external->check_learned_clause ();
+            Clause *new_built_clause = new_clause(clause_id, true, glue);
+            if (proof) proof->add_derived_clause(new_built_clause, is_imported);
+            assert (watching());
+            watch_clause (new_built_clause);
+        }
     }
-
-    // Try to learn unit clause
-    if (addClause && unitLit != 0) {
-      // Do not learn unit clause if marked as witness
-      if (!external->marked (external->witness, unitLit)) {
-          int ilit = external->internalize (unitLit);
-          auto& f = flags(ilit);
-          // Do not import eliminated or substituted literal, or units that are already fixed
-          if (!f.eliminated () && !f.substituted () && !f.fixed()){
-              if (proof) proof->add_derived_unit_clause(clause_id, ilit, true);
-              assign_original_unit (clause_id, ilit);
-          }
-      }
-    }
-
+    //we can't need these anymore, so clear them
     clause.clear();
+    chain.clear();
 
     // Stop importing if SAT or UNSAT was found
     if (unsat) {
@@ -297,15 +298,19 @@ void Internal::import_redundant_clauses (int& res) {
 }
 
 
-//Check whether we can add a non-unit imported clause to our set of clauses
-//Also, set unitLit appropriately based on reductions
-bool Internal::check_non_unit_clause_import(std::vector<int> cls, size_t size, int *unitLit, clause_id_t id){
+//Check whether we can add an imported clause to our set of clauses
+//Return results:
+//  1:  Add imported clause
+//  0:  Don't add anything
+// -1:  Add simplified clause
+int Internal::check_clause_import(std::vector<int> cls){
+    size_t size = cls.size();
     bool need_to_add = true;
     //if there are falsified literals in the imported clause, we need
     //   to create a new, simplified clause to add in its place
     bool need_to_simplify = false;
     chain.clear();
-    size_t i = 1; //start at 1 to skip glue
+    size_t i = size > 1 ? 1 : 0; //start at 1 to skip glue if there is glue
     while (need_to_add && i < size){
         int elit = cls[i];
         assert (elit != 0);
@@ -320,10 +325,11 @@ bool Internal::check_non_unit_clause_import(std::vector<int> cls, size_t size, i
         int ilit = external->internalize(elit);
 
         auto& f = flags (ilit);
-        if (f.eliminated ()) {
-            // Literal has been eliminated: do not add this clause.
+        if (f.eliminated () || f.substituted ()) {
+            // Literal has been eliminated or substituted: do not add this clause.
             need_to_add = false;
-        } else if (f.fixed ()){
+        }
+        else if (f.fixed ()){
             if (val (ilit) == 1) {
                 //fixed and true:  clause is already satisfied, and can be omitted
                 need_to_add = false;
@@ -337,37 +343,16 @@ bool Internal::check_non_unit_clause_import(std::vector<int> cls, size_t size, i
         } else{
             //only include non-fixed literals in the clause
             clause.push_back(ilit);
-            *unitLit = elit;
         }
         i++;
     }
-    //if there were falsified literals and the clause is otherwise good,
-    //   add a new clause based on it
-    if (need_to_add && need_to_simplify){
-        chain.push_back(id);
-        clause_id_t new_id = next_clause_id();
-        size_t size = clause.size();
-        if (size == 0){
-            unsat = true;
-            if (proof) proof->add_derived_empty_clause(new_id);
+    if (need_to_add){
+        if (need_to_simplify){
+            return -1;
         }
-        else if (size == 1){
-            if (proof) proof->add_derived_unit_clause(new_id, clause[0], false);
-            assign_original_unit(new_id, clause[0]);
-        }
-        else{
-            external->check_learned_clause ();
-            //we don't have a glue value computed, so use the size
-            Clause *new_built_clause = new_clause(new_id, true, clause.size());
-            if (proof) proof->add_derived_clause(new_built_clause, false);
-            assert (watching());
-            watch_clause (new_built_clause);
-        }
-        //do not add the actual clause we read, since we replaced it
-        need_to_add = false;
+        return 1;
     }
-    chain.clear(); //anything in it was added by us, and we don't need it anymore
-    return need_to_add;
+    return 0;
 }
 
 

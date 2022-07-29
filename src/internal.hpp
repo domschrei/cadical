@@ -959,7 +959,7 @@ struct Internal {
     bool importing ();
     void import_redundant_clauses (int& res);
     clause_id_t convert_imported_clause_id (std::vector<int>& cls);
-    bool check_non_unit_clause_import(std::vector<int> cls, size_t size, int *unitLit, clause_id_t id);
+    int check_clause_import(std::vector<int> cls);
 
     // Forcing decision variables to a certain phase.
     //
