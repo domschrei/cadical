@@ -282,10 +282,9 @@ void Internal::import_redundant_clauses (int& res) {
             if (proof) proof->add_derived_empty_clause(clause_id);
         }
         else if (size == 1){
-            //if (proof) proof->add_derived_unit_clause(clause_id, clause[0], is_imported);
+            if (proof) proof->add_derived_unit_clause(clause_id, clause[0], is_imported);
             int ilit = external->internalize(clause[0]);
-            //assign_original_unit(clause_id, ilit);
-            learn_unit_clause(clause_id, ilit, is_imported);
+            assign_original_unit(clause_id, ilit);
         }
         else{
             external->check_learned_clause ();
