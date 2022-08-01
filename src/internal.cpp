@@ -342,7 +342,7 @@ int Internal::check_clause_import(std::vector<int> cls){
             }
         } else{
             //only include non-fixed literals in the clause
-            clause.push_back(ilit);
+            clause.push_back(elit);
         }
         i++;
     }
