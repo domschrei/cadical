@@ -92,7 +92,7 @@ void Tracer::add_derived_clause (clause_id_t id, const vector<int64_t> * chain, 
     for (const auto & c : *chain){
       if (binary) put_binary_signed (c);
       else file->put (c), file->put (' ');
-      printf("Using %lld for %lld : ", c, id);
+      printf("Using %lld for %lld in %d : ", c, id, internal->opts.get("instance_num"));
       for (const auto cl : internal->clauses){
           if (cl->id == c){
               for (int j = 0; j < cl->size; j++){
