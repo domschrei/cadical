@@ -246,6 +246,14 @@ void Internal::import_redundant_clauses (int& res) {
     assert (clause.empty ());
     int addClause = check_clause_import(cls);
 
+    //Print the imported clause itself
+    printf("Importing %lld into %d with ", clause_id, opts.get("instance_num"));
+    int i = cls.size() == 1 ? 0 : 1;
+    while (i < (int) cls.size()){
+        printf(" %d", cls[i]);
+    }
+    printf("\n");
+
     // Check whether something should be added
     if (addClause){
         bool is_imported;
