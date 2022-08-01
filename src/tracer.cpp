@@ -76,6 +76,23 @@ void Tracer::add_original_clause (clause_id_t id, const vector<int> & clause) {
 void Tracer::add_derived_clause (clause_id_t id, const vector<int64_t> * chain, const vector<int> & clause, bool is_imported) {
   if (is_imported) { return; } //don't put imported clauses in proof file
   if (file->closed ()) return;
+
+  vector<int64_t> todovec;
+  for (auto const & c : *chain){
+      todovec.push_back(id);
+      todovec.push_back(c);
+      for (const auto cl : internal->clauses){
+          if (cl->id == c){
+              for (int i = 0; i < cl->size; i++){
+                  todovec.push_back((int64_t) cl->literals[i]);
+              }
+          }
+          break;
+      }
+      add_todo(todovec);
+      todovec.clear();
+  }
+
   LOG ("TRACER tracing addition of derived clause");
   if (binary) file->put ('a');
   else if (lrat) file->put ("a ");
@@ -92,16 +109,6 @@ void Tracer::add_derived_clause (clause_id_t id, const vector<int64_t> * chain, 
     for (const auto & c : *chain){
       if (binary) put_binary_signed (c);
       else file->put (c), file->put (' ');
-      printf("Using %lld for %lld in %d : ", c, id, internal->opts.get("instance_num"));
-      for (const auto cl : internal->clauses){
-          if (cl->id == c){
-              for (int j = 0; j < cl->size; j++){
-                  printf(" %d", cl->literals[j]);
-              }
-              printf("\n");
-              break;
-          }
-      }
     }
   }
   if (binary) put_binary_zero ();
