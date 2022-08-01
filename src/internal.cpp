@@ -251,6 +251,7 @@ void Internal::import_redundant_clauses (int& res) {
     int i = cls.size() == 1 ? 0 : 1;
     while (i < (int) cls.size()){
         printf(" %d", cls[i]);
+        i++;
     }
     printf("\n");
 
