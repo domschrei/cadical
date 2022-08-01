@@ -78,17 +78,17 @@ void Tracer::add_derived_clause (clause_id_t id, const vector<int64_t> * chain, 
   if (file->closed ()) return;
 
   vector<int64_t> todovec;
-  for (auto const & c : *chain){
+  for (const auto & c : *chain){
       todovec.push_back(id);
       todovec.push_back(c);
       for (const auto cl : internal->clauses){
           if (cl->id == c){
-              todovec.push_back(cl->size);
-              for (int i = 0; i < cl->size; i++){
-                  todovec.push_back((int64_t) cl->literals[i]);
+              for (int j = 0; j < cl->size; j++){
+                  todovec.push_back(cl->literals[j]); //printf(" %d", cl->literals[j]);
               }
+              //printf("\n");
+              break;
           }
-          break;
       }
       add_todo(todovec);
       todovec.clear();
