@@ -276,6 +276,14 @@ void Internal::import_redundant_clauses (int& res) {
         vector<int64_t> todo_vec{(int64_t) is_imported};
         proof->add_todo(todo_vec);
 
+        printf("Actual %lld : ", clause_id);
+        int i = 0;
+        while (i < (int) clause.size()){
+            printf(" %d", clause[i]);
+            i++;
+        }
+        printf("\n");
+
         size_t size = clause.size();
         if (size == 0){
             unsat = true;
