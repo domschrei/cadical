@@ -74,10 +74,16 @@ void Tracer::add_original_clause (clause_id_t id, const vector<int> & clause) {
 }
 
 void Tracer::add_derived_clause (clause_id_t id, const vector<int64_t> * chain, const vector<int> & clause, bool is_imported) {
+  LOG("At Tracer::add_derived_clause");
   if (is_imported) { return; } //don't put imported clauses in proof file
   if (file->closed ()) return;
 
   vector<int64_t> todovec;
+
+  if (!chain) {
+     LOG("TRACER: add_derived_clause: no chain; skipping");
+     return;
+  }
   for (const auto & c : *chain){
       todovec.push_back(id);
       todovec.push_back(c);
@@ -119,6 +125,8 @@ void Tracer::add_derived_clause (clause_id_t id, const vector<int64_t> * chain, 
   if (clause.size() == 0){
       flush();
   }
+  LOG("Ending Tracer::add_derived_clause");
+  
 }
 
 void Tracer::delete_clause (clause_id_t id, const vector<int> & clause) {

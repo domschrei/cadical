@@ -136,6 +136,7 @@ void External::add (int elit) {
   const int ilit = internalize (elit);
   assert (!elit == !ilit);
   if (elit) LOG ("adding external %d as internal %d", elit, ilit);
+  else LOG("adding zero external lit %d", ilit);
   internal->add_original_lit (ilit);
 }
 

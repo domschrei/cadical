@@ -6,7 +6,7 @@
 namespace CaDiCaL {
 
     LearnerObserver::LearnerObserver (External *e) :
-        external(e)
+        external(e), internal(e->internal)
     {
         LOG ("LEARNEROBSERVER new");
     }
@@ -19,6 +19,7 @@ namespace CaDiCaL {
 
     void LearnerObserver::add_derived_clause (clause_id_t id, const vector<clause_id_t> *,
                                               const vector<int> &lits, bool is_imported, int glue){
+        LOG("LEARNEROBSERVER add_derived_clause");
         if (is_imported){ //only export if not imported
             return;
         }
@@ -34,6 +35,8 @@ namespace CaDiCaL {
         else if (lits.size() > 1){
             external->export_learned_large_clause(id, lits, glue);
         }
+        LOG("LEARNEROBSERVER exiting add_derived_clause");
+        
         //ignore empty clause
     }
 

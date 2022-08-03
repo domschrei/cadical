@@ -10,6 +10,7 @@ namespace CaDiCaL {
 class LearnerObserver : public Observer {
 
   External * external;
+  Internal * internal;
 
 public:
 

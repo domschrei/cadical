@@ -440,6 +440,27 @@ bool Checker::propagate_chain (const vector<int64_t> * chain) {
     int unit = 0;
     for (int k = 0; k < size; k++)
       if (val (lits[k]) >= 0) {
+        if (unit) return true;
+        unit = lits[k];
+      }
+    if (!unit) return false;
+    assign (unit);
+  }
+  return true;
+}
+
+/*
+bool Checker::propagate_chain (const vector<int64_t> * chain) {
+  if (!chain) return propagate ();
+
+  for (int64_t cid : *chain) {
+    auto c = find_id (cid);
+    if (!*c) continue;
+    int size = (*c)->size;
+    int * lits = (*c)->literals;
+    int unit = 0;
+    for (int k = 0; k < size; k++)
+      if (val (lits[k]) >= 0) {
         if (unit) return false;
         unit = lits[k];
       }
@@ -447,7 +468,7 @@ bool Checker::propagate_chain (const vector<int64_t> * chain) {
     assign (unit);
   }
   return false;
-}
+} */
 
 bool Checker::check (const vector<int64_t> * chain) {
   stats.checks++;

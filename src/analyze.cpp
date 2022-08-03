@@ -14,7 +14,7 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 void Internal::learn_empty_clause () {
-  assert (!unsat), assert (clause.empty ());
+  assert (!unsat); // assert (clause.empty ());
   clause_id_t id = next_clause_id();
   LOG ("learned empty clause [%ld]", id);
   external->check_learned_empty_clause ();

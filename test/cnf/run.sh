@@ -28,11 +28,11 @@ die "needs to be called from a top-level sub-directory of CaDiCaL"
 [ -x "$CADICALBUILD/cadical" ] || \
   die "can not find '$CADICALBUILD/cadical' (run 'make' first)"
 
-echo -n "$HILITE"
-echo "---------------------------------------------------------"
-echo "CNF testing in '$CADICALBUILD'"
-echo "---------------------------------------------------------"
-echo -n "$NORMAL"
+cecho -n "$HILITE"
+cecho "---------------------------------------------------------"
+cecho "CNF testing in '$CADICALBUILD'"
+cecho "---------------------------------------------------------"
+cecho -n "$NORMAL"
 
 make -C $CADICALBUILD
 res=$?
@@ -44,7 +44,7 @@ coresolver="$CADICALBUILD/cadical"
 simpsolver="$CADICALBUILD/../scripts/run-simplifier-and-extend-solution.sh"
 proofchecker=$CADICALBUILD/drat-trim
 solutionchecker=$CADICALBUILD/precochk
-fratchecker=../../frat/frat-rs/target/release/frat-rs
+fratchecker=../../frat/frat-rs
 makefile=$CADICALBUILD/makefile
 
 if [ ! -f $proofchecker -o ! -f $solutionchecker ]
@@ -97,7 +97,7 @@ core () {
   chk=$prefix-$1.chk
   if [ -f cnf/$1.sol ]
   then
-    solopts=" -r ../test/cnf/$1.sol"
+    solopts=" -s ../test/cnf/$1.sol"
   else
     solopts=""
   fi
@@ -143,17 +143,31 @@ core () {
     fi
   elif [ $res = 20 ]
   then
-    echo " ${GOOD}ok${NORMAL} (exit code as expected)"
-    if $fratchecker -l $prf
+    cecho " ${GOOD}ok${NORMAL} (exit code as expected)"
+  #   if [ ! x"$proofchecker" = xnone ]
+  #   then
+  #     cecho "$proofchecker \\"
+  #     cecho "$cnf $prf"
+  #     cecho -n "# 0 ..."
+  #     if $proofchecker $cnf $prf 1>&2 >$chk
+  #     then
+	# cecho " ${GOOD}ok${NORMAL} (proof checked)"
+	# ok=`expr $ok + 1`
+  #     else
+	# cecho " ${BAD}FAILED${NORMAL} (proof check '$proofchecker $cnf $prf' failed)"
+	# failed=`expr $failed + 1`
+  #     fi
+  #   fi
+    if $fratchecker elab $prf -s -m $cnf -v
     then
-      echo " ${GOOD}ok${NORMAL} (proof checked)"
+      cecho " ${GOOD}ok${NORMAL} (proof checked)"
       ok=`expr $ok + 1`
     else
-      echo " ${BAD}FAILED${NORMAL} (proof check '$fratchecker -l $prf' failed)"
+      cecho " ${BAD}FAILED${NORMAL} (proof check '$fratchecker elab $prf -s -m $cnf -v' failed)"
       failed=`expr $failed + 1`
     fi
   else
-    echo " ${BAD}FAILED${NORMAL} (unsupported exit code $res)"
+    cecho " ${BAD}FAILED${NORMAL} (unsupported exit code $res)"
     failed=`expr $failed + 1`
   fi
 }

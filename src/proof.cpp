@@ -206,6 +206,7 @@ void Proof::add_original_clause (clause_id_t id) {
 
 void Proof::add_derived_clause (clause_id_t id, bool is_imported, int glue) {
   LOG (clause, "PROOF adding derived external clause");
+
   vector<clause_id_t> * chain = internal->chain.empty () ? 0 : &internal->chain;
   if ((int) clause.size() < glue){
       //fix glue size so it is not smaller than the clause size
@@ -215,10 +216,13 @@ void Proof::add_derived_clause (clause_id_t id, bool is_imported, int glue) {
       //fix glue size so it is at least the minimum size
       glue = 1;
   }
-  for (size_t i = 0; i < observers.size (); i++)
+  for (size_t i = 0; i < observers.size (); i++) {
       observers[i]->add_derived_clause (id, chain, clause, is_imported, glue);
+  }
   internal->chain.clear ();
   clause.clear ();
+  LOG ("PROOF Completed add_original_clause");
+
 }
 
 void Proof::delete_clause (clause_id_t id) {
