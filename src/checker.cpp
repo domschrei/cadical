@@ -38,6 +38,18 @@ inline CheckerWatcher & Checker::watcher (int lit) {
 
 /*------------------------------------------------------------------------*/
 
+CheckerClause * Checker::new_unit_clause (int lit) {
+  const size_t bytes = sizeof (CheckerClause);
+  CheckerClause * res = new CheckerClause;
+  res->next = 0;
+  res->hash = last_hash;
+  res->size = 1;
+  res->literals[0] = lit;
+  res->literals[1] = 0;
+  num_clauses++;
+  return res;
+}
+
 CheckerClause * Checker::new_clause () {
   const size_t size = simplified.size ();
   assert (size > 1), assert (size <= UINT_MAX);
@@ -73,7 +85,6 @@ CheckerClause * Checker::new_clause () {
 
 void Checker::delete_clause (CheckerClause * c) {
   if (c->size) {
-    assert (c->size > 1);
     assert (num_clauses);
     num_clauses--;
   } else {
@@ -124,7 +135,7 @@ void Checker::collect_garbage_clauses () {
   for (size_t i = 0; i < size_clauses; i++) {
     CheckerClause ** p = clauses + i, * c;
     while ((c = *p)) {
-      if (clause_satisfied (c)) {
+      if (c->size > 1 && clause_satisfied (c)) {
         c->size = 0;                    // mark as garbage
         *p = c->next;
         c->next = garbage;
@@ -330,11 +341,11 @@ CheckerClause ** Checker::find (int64_t id) {
   return res;
 }
 
-void Checker::insert (int64_t id) {
+void Checker::insert (int64_t id, int unit) {
   stats.insertions++;
   if (num_clauses == size_clauses) enlarge_clauses ();
   const uint64_t h = reduce_hash (compute_hash (id), size_clauses);
-  CheckerClause * c = new_clause ();
+  CheckerClause * c = unit ? new_unit_clause (unit) : new_clause ();
   c->next = clauses[h];
   clauses[h] = c;
 }
@@ -342,7 +353,9 @@ void Checker::insert (int64_t id) {
 /*------------------------------------------------------------------------*/
 
 inline void Checker::assign (int lit) {
-  assert (!val (lit));
+  // we can't promise this when propagate () and propagate_chain () interleave
+  // assert (!val (lit));
+  if (val (lit)) return;
   vals[lit] = 1;
   vals[-lit] = -1;
   trail.push_back (lit);
@@ -506,12 +519,13 @@ void Checker::add_clause (int64_t id, const char * type) {
   } else if (unit != INT_MIN) {
     LOG ("CHECKER added and checked %s unit clause %d", type, unit);
     assign (unit);
+    insert(id, unit);
     stats.units++;
     if (!propagate ()) {
       LOG ("CHECKER inconsistent after propagating %s unit", type);
       inconsistent = true;
     }
-  } else insert (id);
+  } else insert (id, 0);
 }
 
 void Checker::add_original_clause (int64_t id, const vector<int> & c) {

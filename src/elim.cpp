@@ -327,6 +327,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
   if (size == 1) {
     int unit = clause[0];
     LOG ("unit resolvent %d", unit);
+    clause.clear ();
     assign_unit (unit);
     if (propagate_eagerly)
       elim_propagate (eliminator, unit);

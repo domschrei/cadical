@@ -103,13 +103,15 @@ class Checker : public Observer {
   static uint64_t reduce_hash (uint64_t hash, uint64_t size);
 
   void enlarge_clauses ();      // enlarge hash table for clauses
-  void insert (int64_t);        // insert clause in hash table
+  void insert (int64_t, int unit);        // insert clause in hash table
   CheckerClause ** find (int64_t); // find clause position in hash table
   CheckerClause ** find_id (int64_t); // find clause position in hash table
 
   void add_clause (clause_id_t id, const char * type);
 
   void collect_garbage_clauses ();
+
+  CheckerClause * new_unit_clause (int lit);
 
   CheckerClause * new_clause ();
   void delete_clause (CheckerClause *);

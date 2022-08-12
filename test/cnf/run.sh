@@ -97,7 +97,8 @@ core () {
   chk=$prefix-$1.chk
   if [ -f cnf/$1.sol ]
   then
-    solopts=" -s ../test/cnf/$1.sol"
+    solopts=""
+    # solopts=" -r ../test/cnf/$1.sol"
   else
     solopts=""
   fi
@@ -107,7 +108,16 @@ core () {
   else
     proofopts=" $prf --lrat=true"
   fi
-  opts="$cnf --check$solopts$proofopts"
+
+  cnfsimp=../test/cnf/$1-simp.cnf
+  opts="$cnf $1 -c 0 -o $cnfsimp"
+  cecho "MWW added code here."
+  cecho "$coresolver \\"
+  cecho "$opts"
+  "$coresolver" $opts 1>$log 2>$err
+  cecho "MWW preprocessed."
+
+  opts="$cnfsimp --check$solopts$proofopts"
   cecho "$coresolver \\"
   cecho "$opts"
   cecho -n "# $2 ..."
@@ -130,9 +140,9 @@ core () {
 	ok=`expr $ok + 1`
     else
       cecho "$solutionchecker \\"
-      cecho "$cnf $log"
+      cecho "$cnfsimp $log"
       cecho -n "# 0 ..."
-      if $solutionchecker $cnf $log 1>&2 >$chk
+      if $solutionchecker $cnfsimp $log 1>&2 >$chk
       then
         cecho " ${GOOD}ok${NORMAL} (solution checked externally too)"
 	ok=`expr $ok + 1`
@@ -158,12 +168,12 @@ core () {
 	# failed=`expr $failed + 1`
   #     fi
   #   fi
-    if $fratchecker elab $prf -s -m $cnf -v
+    if $fratchecker elab $prf -s -m $cnfsimp -v
     then
       cecho " ${GOOD}ok${NORMAL} (proof checked)"
       ok=`expr $ok + 1`
     else
-      cecho " ${BAD}FAILED${NORMAL} (proof check '$fratchecker elab $prf -s -m $cnf -v' failed)"
+      cecho " ${BAD}FAILED${NORMAL} (proof check '$fratchecker elab $prf -s -m $cnfsimp -v' failed)"
       failed=`expr $failed + 1`
     fi
   else
@@ -213,7 +223,7 @@ simp () {
 
 run () {
   core $*
-  simp $*
+  # simp $*
 }
 
 run empty 10

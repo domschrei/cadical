@@ -109,11 +109,13 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
           } else if (unit && unit != INT_MIN) {
             assert (unit);
             LOG (d, "unit %d through hyper unary resolution with", unit);
-            PROOF_TODO (proof, "hyper unary resolution unit", 20); // TODO(Mario)
+            // PROOF_TODO (proof, "hyper unary resolution unit", 20); // TODO(Mario)
+            chain = {c->id, d->id};
             assign_unit (unit);
             elim_propagate (eliminator, unit);
             break;
           } else if (occs (negated).size () <= (size_t) opts.elimocclim) {
+            chain = {c->id, d->id};
             strengthen_clause (d, negated);
             remove_occs (occs (negated), d);
             elim_update_removed_lit (eliminator, negated);

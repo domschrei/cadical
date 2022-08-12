@@ -84,7 +84,7 @@ void Tracer::add_derived_clause (clause_id_t id, const vector<int64_t> * chain, 
      LOG("TRACER: add_derived_clause: no chain; skipping");
      return;
   }
-  for (const auto & c : *chain){
+  /* for (const auto & c : *chain){
       todovec.push_back(id);
       todovec.push_back(c);
       for (const auto cl : internal->clauses){
@@ -98,7 +98,7 @@ void Tracer::add_derived_clause (clause_id_t id, const vector<int64_t> * chain, 
       }
       add_todo(todovec);
       todovec.clear();
-  }
+  } */
 
   LOG ("TRACER tracing addition of derived clause");
   if (binary) file->put ('a');
