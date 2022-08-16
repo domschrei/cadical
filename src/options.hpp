@@ -93,7 +93,8 @@ OPTION( flush,             0,  0,  1,0,0,1, "flush redundant clauses") \
 OPTION( flushfactor,       3,  1,1e3,0,0,1, "interval increase") \
 OPTION( flushint,        1e5,  1,2e9,0,0,1, "initial limit") \
 OPTION( forcephase,        0,  0,  1,0,0,1, "always use initial phase") \
-OPTION( inprocessing,      1,  0,  1,0,0,1, "enable inprocessing") \
+OPTION( frat,              0,  0,  1,0,0,0, "output proof in FRAT format") \
+OPTION( inprocessing,      1,  0,  1,0,0,1, "enable inprocessing")      \
 OPTION( instance_num,      1,  1,2e9,0,0,0, "instance number of multiple instances running") \
 OPTION( instantiate,       0,  0,  1,0,1,1, "variable instantiation") \
 OPTION( instantiateclslim, 3,  2,2e9,0,0,1, "minimum clause size") \
