@@ -5,9 +5,9 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-Tracer::Tracer (Internal * i, File * f, bool b, bool l, bool fr) :
+Tracer::Tracer (Internal * i, File * f, bool b, bool l, bool fr, bool d) :
   internal (i),
-  file (f), binary (b), lrat (l), frat (fr),
+  file (f), binary (b), lrat (l), frat (fr), should_delete_clauses(d),
   added (0), deleted (0)
 {
   (void) internal;
@@ -128,6 +128,7 @@ void Tracer::add_derived_clause (clause_id_t id, const vector<int64_t> * chain, 
 }
 
 void Tracer::delete_clause (clause_id_t id, const vector<int> & clause) {
+  if (!should_delete_clauses) return;
   if (file->closed ()) return;
   LOG ("TRACER tracing deletion of clause");
   //output a leading, ignored clause ID for LRAT
