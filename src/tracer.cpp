@@ -80,12 +80,19 @@ void Tracer::add_derived_clause (clause_id_t id, const vector<int64_t> * chain, 
   if (file->closed ()) return;
   LOG ("TRACER tracing addition of derived clause");
   //only FRAT files start lines with a
-  if (frat && binary) file->put ('a');
+  if ((lrat || frat) && binary) file->put ('a');
   else if (frat) file->put ("a ");
   //clause ID for FRAT or LRAT files
-  if (lrat || frat) {
-    if (binary) put_binary_unsigned (id);
-    else file->put (id), file->put ("  ");
+  if (binary){
+      if (lrat){
+          put_binary_signed(id);
+      }
+      else if (frat){
+          put_binary_unsigned(id);
+      }
+  }
+  else if (lrat || frat) {
+      file->put (id), file->put (" ");
   }
   //output literals for anything
   for (const auto & external_lit : clause){
@@ -124,17 +131,19 @@ void Tracer::delete_clause (clause_id_t id, const vector<int> & clause) {
   if (file->closed ()) return;
   LOG ("TRACER tracing deletion of clause");
   //output a leading, ignored clause ID for LRAT
-  if (lrat && !frat){
-      if (binary) put_binary_unsigned(id);
-      else file->put(id), file->put(" ");
+  if (lrat && !binary){
+      file->put(id), file->put(" ");
   }
   //output the delete d for any format
   if (binary) file->put ('d');
   else file->put ("d ");
   //output clause ID being deleted for LRAT or FRAT
-  if (lrat || frat) {
-    if (binary) put_binary_unsigned (id);
-    else file->put (id), file->put ("  ");
+  if (binary){
+      if (lrat) put_binary_signed(id);
+      else if (frat) put_binary_unsigned(id);
+  }
+  else if (lrat || frat) {
+    file->put (id), file->put (" ");
   }
   //output literals for FRAT or DRAT
   if (frat || !lrat){
