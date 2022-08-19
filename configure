@@ -260,7 +260,7 @@ esac
 
 if [ $debug = yes ]
 then
-  CXXFLAGS="$CXXFLAGS -g"
+  CXXFLAGS="$CXXFLAGS -g -fsanitize=thread"
 else
   case x"$CXX" in
     x*g++*|x*clang++*) CXXFLAGS="$CXXFLAGS -O3";;
