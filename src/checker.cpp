@@ -561,7 +561,7 @@ void Checker::add_derived_clause (int64_t id, const vector<int64_t> * chain, con
     if (chain) {
       fputs ("\nchain:\n", stderr);
       for (const auto & cid : *chain) {
-        fprintf (stderr, "%lld: ",cid);
+        fprintf (stderr, "%ld: ",cid);
         auto c = find_id (cid);
         if (!*c) { fprintf (stderr, "not found\n"); continue; }
         int size = (*c)->size;
