@@ -1,5 +1,12 @@
 #include "internal.hpp"
 
+// HACK! 
+#include <string>
+#include <sstream>
+#include <fstream>
+#include <iostream>
+
+
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
@@ -240,6 +247,15 @@ void Internal::import_redundant_clauses (int& res) {
     // Fetch pointer to 1st literal and size of the clause (plus glue)
     auto cls = external->learnSource->getNextClause ();
     assert (cls.size() >= 3); //must have ID (2) + at least one literal (1)
+
+		//
+		// MWW: Terrible, horrible hack for debugging.
+		//
+		std::string clauseString;
+		for (size_t i = 0; i < cls.size(); ++i)
+			clauseString += std::to_string(cls[i]) + " ";
+		std::cout << "Receiving clause: " << clauseString << std::endl;
+		cout.flush();
 
     clause_id_t clause_id = convert_imported_clause_id(cls);
     assert (cls.size () > 0);
