@@ -1,11 +1,15 @@
 #include "internal.hpp"
 
 // HACK! 
-#include <string>
-#include <sstream>
-#include <fstream>
-#include <iostream>
-
+#ifdef MWW_DEBUG_HACK
+  #include <string>
+  #include <sstream>
+  #include <fstream>
+  #include <iostream>
+  #define MWW_COND_EXECUTE(cmd) cmd
+#else
+  #define MWW_COND_EXECUTE(cmd)
+#endif
 
 namespace CaDiCaL {
 
@@ -330,11 +334,13 @@ void Internal::import_redundant_clauses (int& res) {
 		//
 		// MWW: Terrible, horrible hack for debugging.
 		//
-		std::string clauseString;
-		for (size_t i = 0; i < cls.size(); ++i)
-			clauseString += std::to_string(cls[i]) + " ";
-		std::cout << "Receiving clause: " << clauseString << std::endl;
-		cout.flush();
+    MWW_COND_EXECUTE({
+      std::string clauseString;
+      for (size_t i = 0; i < cls.size(); ++i)
+        clauseString += std::to_string(cls[i]) + " ";
+      std::cout << "Receiving clause: " << clauseString << std::endl;
+      cout.flush();
+    })
 
     assert (clause.empty ());
 
@@ -394,7 +400,6 @@ void Internal::import_redundant_clauses (int& res) {
           // use in solving.
           if (proof) proof->add_derived_unit_clause(clause_id, clause[0], is_direct_import);          
           assign_original_unit(clause_id, clause[0]);
-          std::cout << "Completed assign_original_unit." << std::endl;
       }
       else{
           external->check_learned_clause ();
