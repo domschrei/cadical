@@ -12,7 +12,7 @@ class Tracer : public Observer {
 
   Internal * internal;
   File * file;
-  bool binary, lrat;
+  bool binary, lrat, frat, should_delete_clauses;
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
   void put_binary_unsigned (int64_t n);
@@ -21,7 +21,7 @@ class Tracer : public Observer {
 
 public:
 
-  Tracer (Internal *, File * file, bool binary, bool lrat); // own and delete 'file'
+  Tracer (Internal *, File * file, bool binary, bool lrat, bool frat, bool delete_clauses); // own and delete 'file'
   ~Tracer ();
 
   void add_original_clause (clause_id_t, const vector<int> &);

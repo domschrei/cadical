@@ -5,9 +5,9 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-Tracer::Tracer (Internal * i, File * f, bool b, bool l) :
+Tracer::Tracer (Internal * i, File * f, bool b, bool l, bool fr, bool d) :
   internal (i),
-  file (f), binary (b), lrat (l),
+  file (f), binary (b), lrat (l), frat (fr), should_delete_clauses(d),
   added (0), deleted (0)
 {
   (void) internal;
@@ -57,18 +57,20 @@ inline void Tracer::put_binary_unsigned (int64_t n) {
 /*------------------------------------------------------------------------*/
 
 void Tracer::add_original_clause (clause_id_t id, const vector<int> & clause) {
-  if (!lrat) return;
+  if (!frat) return; //only FRAT files contain original clauses
   if (file->closed ()) return;
   LOG ("TRACER tracing addition of original clause");
+  //output o
   if (binary) file->put ('o');
-  else if (lrat) file->put ("o ");
-  if (lrat) {
-    if (binary) put_binary_unsigned (id);
-    else file->put (id), file->put ("  ");
-  }
+  else file->put ("o ");
+  //output id
+  if (binary) put_binary_unsigned (id);
+  else file->put (id), file->put ("  ");
+  //output literals
   for (const auto & external_lit : clause)
     if (binary) put_binary_lit (external_lit);
     else file->put (external_lit), file->put (' ');
+  //output end line
   if (binary) put_binary_zero ();
   else file->put ("0\n");
 }
@@ -84,40 +86,48 @@ void Tracer::add_derived_clause (clause_id_t id, const vector<int64_t> * chain, 
      LOG("TRACER: add_derived_clause: no chain; skipping");
      return;
   }
-  /* for (const auto & c : *chain){
-      todovec.push_back(id);
-      todovec.push_back(c);
-      for (const auto cl : internal->clauses){
-          if (cl->id == c){
-              for (int j = 0; j <= cl->size; j++){
-                  todovec.push_back(cl->literals[j]); //printf(" %d", cl->literals[j]);
-              }
-              //printf("\n");
-              break;
-          }
-      }
-      add_todo(todovec);
-      todovec.clear();
-  } */
 
   LOG ("TRACER tracing addition of derived clause");
-  if (binary) file->put ('a');
-  else if (lrat) file->put ("a ");
-  if (lrat) {
-    if (binary) put_binary_unsigned (id);
-    else file->put (id), file->put ("  ");
+  //only FRAT files start lines with a
+  if ((lrat || frat) && binary) file->put ('a');
+  else if (frat) file->put ("a ");
+  //clause ID for FRAT or LRAT files
+  if (binary){
+      if (lrat){
+          put_binary_signed(id);
+      }
+      else if (frat){
+          put_binary_unsigned(id);
+      }
   }
-  for (const auto & external_lit : clause)
+  else if (lrat || frat) {
+      file->put (id), file->put (" ");
+  }
+  //output literals for anything
+  for (const auto & external_lit : clause){
     if (binary) put_binary_lit (external_lit);
     else file->put (external_lit), file->put (' ');
-  if (lrat && chain) {
-    if (binary) put_binary_zero (), file->put ('l');
-    else file->put ("0  l ");
+  }
+  //check if we have a chain, which is required for LRAT
+  if (lrat && !chain){ //error if no proof for LRAT
+      throw std::invalid_argument("Tracer for LRAT file add_derived_clauses must have a non-null chain");
+  }
+  //output the proof for FRAT or LRAT files
+  if ((frat || lrat) && chain) {
+      //output end of literals before proof
+      if (binary) put_binary_zero();
+      else file->put("0 ");
+      //output FRAT proof hint marker
+      if (frat){
+          if (binary) file->put ('l');
+          else file->put ("  l ");
+      }
     for (const auto & c : *chain){
       if (binary) put_binary_signed (c);
       else file->put (c), file->put (' ');
     }
   }
+  //end line:  0 ends proof (LRAT/FRAT) or literals (DRAT)
   if (binary) put_binary_zero ();
   else file->put ("0\n");
   added++;
@@ -130,24 +140,38 @@ void Tracer::add_derived_clause (clause_id_t id, const vector<int64_t> * chain, 
 }
 
 void Tracer::delete_clause (clause_id_t id, const vector<int> & clause) {
+  if (!should_delete_clauses) return;
   if (file->closed ()) return;
   LOG ("TRACER tracing deletion of clause");
+  //output a leading, ignored clause ID for LRAT
+  if (lrat && !binary){
+      file->put(id), file->put(" ");
+  }
+  //output the delete d for any format
   if (binary) file->put ('d');
   else file->put ("d ");
-  if (lrat) {
-    if (binary) put_binary_unsigned (id);
-    else file->put (id), file->put ("  ");
+  //output clause ID being deleted for LRAT or FRAT
+  if (binary){
+      if (lrat) put_binary_signed(id);
+      else if (frat) put_binary_unsigned(id);
   }
-  for (const auto & external_lit : clause)
-    if (binary) put_binary_lit (external_lit);
-    else file->put (external_lit), file->put (' ');
+  else if (lrat || frat) {
+    file->put (id), file->put (" ");
+  }
+  //output literals for FRAT or DRAT
+  if (frat || !lrat){
+      for (const auto & external_lit : clause)
+          if (binary) put_binary_lit (external_lit);
+          else file->put (external_lit), file->put (' ');
+  }
+  //end the line with a zero
   if (binary) put_binary_zero ();
   else file->put ("0\n");
   deleted++;
 }
 
 void Tracer::finalize_clause (clause_id_t id, const vector<int> & clause) {
-  if (!lrat) return;
+  if (!frat) return; //only FRAT files contain finalize clauses
   if (file->closed ()) return;
   LOG ("TRACER tracing finalized clause");
   if (binary) file->put ('f');
@@ -162,7 +186,7 @@ void Tracer::finalize_clause (clause_id_t id, const vector<int> & clause) {
 }
 
 void Tracer::add_todo (const vector<int64_t> & vals) {
-  if (!lrat) return;
+  if (!frat) return; //only FRAT files contain todo lines
   if (file->closed ()) return;
   ostringstream ss;
   for (auto c : vals) ss << " " << c;

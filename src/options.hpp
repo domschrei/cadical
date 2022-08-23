@@ -93,7 +93,8 @@ OPTION( flush,             0,  0,  1,0,0,1, "flush redundant clauses") \
 OPTION( flushfactor,       3,  1,1e3,0,0,1, "interval increase") \
 OPTION( flushint,        1e5,  1,2e9,0,0,1, "initial limit") \
 OPTION( forcephase,        0,  0,  1,0,0,1, "always use initial phase") \
-OPTION( inprocessing,      1,  0,  1,0,0,1, "enable inprocessing") \
+OPTION( frat,              0,  0,  1,0,0,0, "output proof in FRAT format") \
+OPTION( inprocessing,      1,  0,  1,0,0,1, "enable inprocessing")      \
 OPTION( instance_num,      1,  1,2e9,0,0,0, "instance number of multiple instances running") \
 OPTION( instantiate,       0,  0,  1,0,1,1, "variable instantiation") \
 OPTION( instantiateclslim, 3,  2,2e9,0,0,1, "minimum clause size") \
@@ -115,7 +116,8 @@ OPTION( probemineff,     1e6,  0,2e9,1,0,1, "minimum probing efficiency") \
 OPTION( probereleff,      20,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( proberounds,       1,  1, 16,1,0,1, "probing rounds" ) \
 OPTION( profile,           2,  0,  4,0,0,0, "profiling level") \
-QUTOPT( quiet,             0,  0,  1,0,0,0, "disable all messages") \
+OPTION( proofdelete,       1,  0,  1,0,0,0, "add delete clauses to written proof") \
+QUTOPT( quiet,             0,  0,  1,0,0,0, "disable all messages")     \
 OPTION( radixsortlim,    800,  0,2e9,0,0,1, "radix sort limit") \
 OPTION( realtime,          0,  0,  1,0,0,0, "real instead of process time") \
 OPTION( reduce,            1,  0,  1,0,0,1, "reduce useless clauses") \
