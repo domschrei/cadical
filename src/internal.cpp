@@ -238,6 +238,81 @@ bool Internal::importing () {
       && watching() && external->learnSource->hasNextClause ();
 }
 
+//Check whether we can add an imported clause to our set of clauses
+const int SINGLETON_CLAUSE_SIZE = 3;
+const int NON_SINGLETON_MIN_CLAUSE_SIZE = 5;
+
+
+Internal::IMPORT_TYPE Internal::create_internal_clause(std::vector<int> cls, 
+  clause_id_t &clause_id, int &glue) {
+    size_t size = cls.size();
+
+    //if there are falsified literals in the imported clause, we need
+    //   to create a new, simplified clause to add in its place
+    bool need_to_simplify = false;
+    chain.clear();
+
+    // clause is either a singleton or has at least two elements.
+    assert (size == SINGLETON_CLAUSE_SIZE || 
+            size >= NON_SINGLETON_MIN_CLAUSE_SIZE);
+    
+    size_t i; 
+
+    // determine clause header information from imported clause
+    if (size == SINGLETON_CLAUSE_SIZE) {
+        memcpy(&clause_id, cls.data(), sizeof(clause_id_t));
+        // skip the clause id.  Glue is 1 for unit.
+        glue = 1;
+        i = 2;
+    } else {
+        memcpy(&clause_id, cls.data() + 1, sizeof(clause_id_t));
+        glue = cls[2];
+        i = 3;
+    }
+    
+    // determine clause body from imported clause, and whether to import it.
+    while (i < size){
+        int elit = cls[i];
+        assert (elit != 0);
+
+        if (external->marked (external->witness, elit)) {
+            // Literal marked as witness: Cannot import
+            return Internal::IMPORT_TYPE::NO_IMPORT;
+        }
+
+        //The only side effects of this are to increase the mapping between internal and external.
+        //Therefore it doesn't matter if we internalize something that isn't going to be imported.
+        int ilit = external->internalize(elit);
+
+        auto& f = flags (ilit);
+        if (f.eliminated () || f.substituted ()) {
+            // Literal has been eliminated or substituted: do not add this clause.
+             return Internal::IMPORT_TYPE::NO_IMPORT;
+        }
+        else if (f.fixed ()){
+            if (val (ilit) == 1) {
+                //fixed and true:  clause is already satisfied, and can be omitted
+              return Internal::IMPORT_TYPE::NO_IMPORT;
+            }
+            else{
+                //clause is false and we need to simplify the clause to import it
+                need_to_simplify = true;
+                Var v = var(ilit);
+                chain.push_back(v.unit_id);
+            }
+        } else{
+            //only include non-fixed literals in the clause
+            clause.push_back(elit);
+        }
+        i++;
+    }
+    if (need_to_simplify){
+        return Internal::IMPORT_TYPE::SIMPLIFIED_IMPORT;
+    }
+    return Internal::IMPORT_TYPE::DIRECT_IMPORT;
+}
+
+
 void Internal::import_redundant_clauses (int& res) {
   if (external->learnSource == 0) return;
   if (res != 0) return;
@@ -246,7 +321,6 @@ void Internal::import_redundant_clauses (int& res) {
   while (external->learnSource->hasNextClause ()) {
     // Fetch pointer to 1st literal and size of the clause (plus glue)
     auto cls = external->learnSource->getNextClause ();
-    assert (cls.size() >= 3); //must have ID (2) + at least one literal (1)
 
 		//
 		// MWW: Terrible, horrible hack for debugging.
@@ -257,46 +331,73 @@ void Internal::import_redundant_clauses (int& res) {
 		std::cout << "Receiving clause: " << clauseString << std::endl;
 		cout.flush();
 
-    clause_id_t clause_id = convert_imported_clause_id(cls);
-    assert (cls.size () > 0);
     assert (clause.empty ());
-    int addClause = check_clause_import(cls);
 
-    // Check whether something should be added
-    if (addClause){
-        bool is_imported;
-        int glue;
-        if (addClause == 1){ // Imported
-            is_imported = true;
-            // Glue int at the front
-            glue = cls[0];
-            assert (glue > 0);
-        }
-        else{ // Simplified
-            is_imported = false;
-            // We don't have a glue computed, so use the size
-            glue = clause.size();
-            chain.push_back(clause_id); // Add imported clause to proof
-            clause_id = next_clause_id();
-        }
+    // create_internal_clause overwrites the internal 'clause' member 
+    // that is the placeholder `builder' clause.  Depending on the 
+    // structure of the literals in the external clause, we may decide to 
+    // skip the clause (return NO_IMPORT), directly import the 
+    // clause (return DIRECT_IMPORT), or simplify the clause prior
+    // to importing it (return SIMPLIFIED_IMPORT).
+    int glue;
+    clause_id_t clause_id; 
+    Internal::IMPORT_TYPE importType = 
+      create_internal_clause(cls, clause_id, glue);
 
-        size_t size = clause.size();
-        if (size == 0){
-            unsat = true;
-            if (proof) proof->add_derived_empty_clause(clause_id);
-        }
-        else if (size == 1){
-            if (proof) proof->add_derived_unit_clause(clause_id, clause[0], is_imported);
-            int ilit = external->internalize(clause[0]);
-            assign_original_unit(clause_id, ilit);
-        }
-        else{
-            external->check_learned_clause ();
-            Clause *new_built_clause = new_clause(clause_id, true, glue);
-            if (proof) proof->add_derived_clause(new_built_clause, is_imported);
-            assert (watching());
-            watch_clause (new_built_clause);
-        }
+    if (importType == Internal::IMPORT_TYPE::NO_IMPORT) {
+      // do nothing
+    } else {
+      // import clause.
+      // First, if we simplify the clause, then the clause is a new
+      // clause, so for the proof we want to derive it from the 
+      // imported clause.  This causes us to give the clause 
+      // a new clause id and glue value. 
+      // 
+      // Then we do different things depending on whether the clause 
+      // after possible simplification contains no literals 
+      // (in which case we are done), one literal (in which case
+      // we import unit), or more than one literal (in which case 
+      // we import a `normal' clause).  We have to track whether 
+      // the clause is a direct import to determine how to represent
+      // it in the proof.  For a direct import, the "reason" comes
+      // from another proof, so we need to track that the clause is 
+      // remote.
+      // For a simplified input clause, the "reason" involves local 
+      // clauses and also the clause id of the remote clause.
+
+      bool is_direct_import; 
+      if (importType == Internal::IMPORT_TYPE::DIRECT_IMPORT) {
+        // use glue and clause_id from the create_clause_id function.
+        is_direct_import = true;
+      } else if (importType == Internal::IMPORT_TYPE::SIMPLIFIED_IMPORT) { // Simplified
+        // Since this is a 'new' clause, we don't have a glue computed, so use the size
+        glue = clause.size();
+        chain.push_back(clause_id); // Add imported clause to proof of the simplified clause.
+        clause_id = next_clause_id();
+        is_direct_import = false;
+      } else {
+        assert(false && "Missing case in import_redundant_clauses function");
+      }
+
+      size_t size = clause.size();
+      if (size == 0){
+          unsat = true;
+          if (proof) proof->add_derived_empty_clause(clause_id);
+      }
+      else if (size == 1){
+          // why do we do both of these?  Ah, one is for the proof, and one is for 
+          // use in solving.
+          if (proof) proof->add_derived_unit_clause(clause_id, clause[0], is_direct_import);
+          int ilit = external->internalize(clause[0]);
+          assign_original_unit(clause_id, ilit);
+      }
+      else{
+          external->check_learned_clause ();
+          Clause *new_built_clause = new_clause(clause_id, true, glue);
+          if (proof) proof->add_derived_clause(new_built_clause, is_direct_import);
+          assert (watching());
+          watch_clause (new_built_clause);
+      }
     }
     //we can't need these anymore, so clear them
     clause.clear();
@@ -315,90 +416,6 @@ void Internal::import_redundant_clauses (int& res) {
 }
 
 
-//Check whether we can add an imported clause to our set of clauses
-//Return results:
-//  1:  Add imported clause
-//  0:  Don't add anything
-// -1:  Add simplified clause
-int Internal::check_clause_import(std::vector<int> cls){
-    size_t size = cls.size();
-    bool need_to_add = true;
-    //if there are falsified literals in the imported clause, we need
-    //   to create a new, simplified clause to add in its place
-    bool need_to_simplify = false;
-    chain.clear();
-    size_t i = size > 1 ? 1 : 0; //start at 1 to skip glue if there is glue
-    while (need_to_add && i < size){
-        int elit = cls[i];
-        assert (elit != 0);
-
-        if (external->marked (external->witness, elit)) {
-            // Literal marked as witness: Cannot import
-            need_to_add = false;
-        }
-
-        //The only side effects of this are to increase the mapping between internal and external.
-        //Therefore it doesn't matter if we internalize something that isn't going to be imported.
-        int ilit = external->internalize(elit);
-
-        auto& f = flags (ilit);
-        if (f.eliminated () || f.substituted ()) {
-            // Literal has been eliminated or substituted: do not add this clause.
-            need_to_add = false;
-        }
-        else if (f.fixed ()){
-            if (val (ilit) == 1) {
-                //fixed and true:  clause is already satisfied, and can be omitted
-                need_to_add = false;
-            }
-            else{
-                //clause is false and we need to simplify the clause to import it
-                need_to_simplify = true;
-                Var v = var(ilit);
-                chain.push_back(v.unit_id);
-            }
-        } else{
-            //only include non-fixed literals in the clause
-            clause.push_back(elit);
-        }
-        i++;
-    }
-    if (need_to_add){
-        if (need_to_simplify){
-            return -1;
-        }
-        return 1;
-    }
-    return 0;
-}
-
-
-//Convert to the clause ID and also remove the clause ID from cls
-clause_id_t Internal::convert_imported_clause_id(std::vector<int>& cls){
-    //Conversion code and assertions due to Dominik Schreiber
-    uint64_t u_clause_id;
-    clause_id_t clause_id;
-    if (cls.size() == 3){
-      //Unit clause:  two ints for ID, one literal
-      memcpy(&u_clause_id, cls.data(), sizeof(clause_id_t));
-      cls.erase(cls.begin(), cls.begin() + 2);
-    }
-    else{
-      //Non-unit clause:  LBD score, two ints for ID, literals
-      memcpy(&u_clause_id, cls.data() + 1, sizeof(clause_id_t));
-      cls.erase(cls.begin() + 1, cls.begin() + 3);
-    }
-    clause_id = (clause_id_t) u_clause_id;
-
-    assert (u_clause_id < std::numeric_limits<uint64_t>::max() / 2 ||
-            [&](){printf("Too large clause ID %" PRIu64 "!\n", u_clause_id); return false;}()
-    );
-    assert(clause_id > 0 || 
-           [&](){printf("Illegal clause ID %" PRId64 "!\n", clause_id); return false;}()
-    );
-
-    return clause_id;
-}
 
 /*------------------------------------------------------------------------*/
 
