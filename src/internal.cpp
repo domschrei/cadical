@@ -302,7 +302,12 @@ Internal::IMPORT_TYPE Internal::create_internal_clause(std::vector<int> cls,
             }
         } else{
             //only include non-fixed literals in the clause
-            clause.push_back(elit);
+            // MWW change: need to push back the **INTERNAL** literals
+            // not the **EXTERNAL** literals. 
+            // 
+            // Produced clause should be an internal clause.
+            //
+            clause.push_back(ilit);
         }
         i++;
     }
@@ -387,9 +392,9 @@ void Internal::import_redundant_clauses (int& res) {
       else if (size == 1){
           // why do we do both of these?  Ah, one is for the proof, and one is for 
           // use in solving.
-          if (proof) proof->add_derived_unit_clause(clause_id, clause[0], is_direct_import);
-          int ilit = external->internalize(clause[0]);
-          assign_original_unit(clause_id, ilit);
+          if (proof) proof->add_derived_unit_clause(clause_id, clause[0], is_direct_import);          
+          assign_original_unit(clause_id, clause[0]);
+          std::cout << "Completed assign_original_unit." << std::endl;
       }
       else{
           external->check_learned_clause ();
