@@ -545,6 +545,10 @@ int App::main (int argc, char ** argv) {
     APPERR ("DIMACS input file '%s' does not exist", dimacs_path);
   if (read_solution_path && !File::exists (read_solution_path))
     APPERR ("solution file '%s' does not exist", read_solution_path);
+  if (proof_specified && !proof_path) {
+    APPERR ("Proof generation specified, but no path for proof file provided",
+      dimacs_path);
+  }
   if (dimacs_specified && dimacs_path &&
       proof_specified && proof_path &&
       !strcmp (dimacs_path, proof_path) && strcmp (dimacs_path, "-"))
