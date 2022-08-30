@@ -376,30 +376,32 @@ struct analyze_trail_larger {
 // newly learnt clause
 
 //static vector<signed char> justified;
-//static vector<Clause*> old_reasons;
+static vector<Clause*> old_reasons;
+struct stack_element {
+    int lit;
+    int64_t id;
+    const_literal_iterator begin, end;
+};
+static vector<stack_element> justify_todo;
 
-void Internal::justify_lit (int lit) {
-  Flags & f = flags (lit);
-  if (f.justified) return;
-  Var & v = var (lit);
+bool justify_lit (Internal& s, int lit) {
+  Flags & f = s.flags (lit);
+  if (f.justified) return true;
+  const Var & v = s.var (lit);
   if (v.unit_id) {
     // LOG ("PROOF justify %d with %ld unit", lit, v.unit_id);
-    chain.push_back (v.unit_id);
+    s.chain.push_back (v.unit_id);
   } else {
-    Clause* c = v.reason;
+    const Clause* c = v.reason;
     if (c) {
-      // LOG ("PROOF justify %d with %ld", lit, c->id);
-      for (const_literal_iterator i = c->begin (); i != c->end (); i++) {
-        int other = *i;
-        if (other == lit) continue;
-        justify_lit (-other);
-      }
-      chain.push_back (c->id);
+        justify_todo.push_back({lit, c->id, c->begin (), c->end ()});
+        return false;
     } else {
       // LOG ("PROOF justify %d hyp", lit);
     }
   }
   f.justified = true;
+  return true;
 }
 
 void Internal::build_chain () {
@@ -413,13 +415,25 @@ void Internal::build_chain () {
     cl = 0;
   }
   for (Flags& f : ftab) f.justified = false;
-  for (const_literal_iterator i = conflict->begin (); i != conflict->end (); i++)
-    justify_lit (-*i);
+  for (const_literal_iterator i = conflict->begin (); i != conflict->end (); ++i) {
+      int lit = -*i;
+      if (justify_lit (*this, lit)) continue;
+      next: while (!justify_todo.empty ()) {
+          auto& el = justify_todo.back ();
+          while (el.begin != el.end) {
+              int lit2 = *el.begin++;
+              if (el.lit != lit2 && !justify_lit (*this, lit2)) goto next;
+          }
+          chain.push_back (el.id);
+          flags (el.lit).justified = true;
+          justify_todo.pop_back ();
+      }
+  }
   chain.push_back (conflict->id);
-  for (unsigned i = 0; i < clause.size(); i++) {
+  for (unsigned i = 0; i < clause.size (); i++) {
     var (clause[i]).reason = old_reasons[i];
   }
-  old_reasons.clear();
+  old_reasons.clear ();
 
 #ifdef LOGGING
   ostringstream ss;

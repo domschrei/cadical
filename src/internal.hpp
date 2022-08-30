@@ -578,7 +578,6 @@ struct Internal {
   Clause * new_driving_clause (const int glue, int & jump);
   int find_conflict_level (int & forced);
   int determine_actual_backtrack_level (int jump);
-  void justify_lit (int lit);
   void build_chain ();
   void analyze ();
   void iterate ();       // report learned unit clause
