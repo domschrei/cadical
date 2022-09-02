@@ -301,7 +301,8 @@ Internal::IMPORT_TYPE Internal::create_internal_clause(std::vector<int> cls,
             else{
                 //clause is false and we need to simplify the clause to import it
                 need_to_simplify = true;
-                chain.push_back(external->unit_id[elit]);
+                int eidx = elit < 0 ? -elit : elit;
+                chain.push_back(external->unit_id[eidx]);
             }
         } else{
             //only include non-fixed literals in the clause
