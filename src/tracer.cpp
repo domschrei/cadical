@@ -82,10 +82,7 @@ void Tracer::add_derived_clause (clause_id_t id, const vector<int64_t> * chain, 
 
   vector<int64_t> todovec;
 
-  if (!chain) {
-     LOG("TRACER: add_derived_clause: no chain; skipping");
-     return;
-  }
+  assert(chain);
 
   LOG ("TRACER tracing addition of derived clause");
   //only FRAT files start lines with a
