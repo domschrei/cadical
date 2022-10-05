@@ -83,8 +83,9 @@ void Tracer::add_derived_clause (clause_id_t id, const vector<int64_t> * chain, 
   vector<int64_t> chain_vec;
   if (!chain) {
     // Dominik Schreiber 2022-10-05: For the corner case where
-    // a unit clause arising from another imported unit clause has no chain,
-    // set its chain to the imported unit clause.
+    // the empty clause arises from an imported unit clause 
+    // and therefore has no chain, set its chain to the imported
+    // unit clause.
     // TODO Replace with something more robust.
     assert(clause.empty ());
     chain_vec.push_back (internal->last_direct_import_unit_id);
