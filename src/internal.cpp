@@ -400,12 +400,11 @@ void Internal::import_redundant_clauses (int& res) {
           // use in solving.
           if (proof) proof->add_derived_unit_clause(clause_id, clause[0], is_direct_import);          
           // MWW 9/13/2022: need to add the clause to the chain, in case we derive the empty clause
-          // in assign_original_unit.  This is only necessary if we haven't already added it, 
-          // e.g. the clause is a direct import.
+          // in assign_original_unit.
           // Dominik Schreiber 2022-10-05: Store ID in a separate temporary variable
           // such that it won't be overwritten by intermediate propagation.
           // TODO Replace with something more robust.
-          if (is_direct_import) { last_direct_import_unit_id = clause_id; } 
+          last_direct_import_unit_id = clause_id;
           assign_original_unit(clause_id, clause[0]);
       }
       else{
