@@ -375,15 +375,6 @@ struct analyze_trail_larger {
 // Fill the 'chain' variable with the LRAT style unit propagation proof of
 // newly learnt clause
 
-//static vector<signed char> justified;
-static vector<Clause*> old_reasons;
-struct stack_element {
-    int lit;
-    int64_t id;
-    const_literal_iterator begin, end;
-};
-static vector<stack_element> justify_todo;
-
 bool justify_lit (Internal& s, int lit) {
   Flags & f = s.flags (lit);
   if (f.justified) return true;
@@ -394,7 +385,7 @@ bool justify_lit (Internal& s, int lit) {
   } else {
     const Clause* c = v.reason;
     if (c) {
-        justify_todo.push_back({lit, c->id, c->begin (), c->end ()});
+        s.justify_todo.push_back({lit, c->id, c->begin (), c->end ()});
         return false;
     } else {
       // LOG ("PROOF justify %d hyp", lit);
