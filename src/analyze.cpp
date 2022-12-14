@@ -832,7 +832,7 @@ void Internal::analyze () {
   }
 
   // Build the chain proof for the conflict.
-  build_chain ();
+  if (internal->proof) build_chain ();
 
   // Update actual size statistics.
   //

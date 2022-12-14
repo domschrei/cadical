@@ -720,7 +720,7 @@ void Solver::connect_learner (Learner * learner) {
 #endif
   external->learner = learner;
   LearnerObserver *lo = new LearnerObserver (external);
-  external->internal->proof->connect(lo);
+  if (external->internal->proof) external->internal->proof->connect(lo);
   LOG_API_CALL_END ("connect_learner");
 }
 
