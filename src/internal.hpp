@@ -230,6 +230,12 @@ struct Internal {
   };
   vector<stack_element> justify_todo;
 
+  // Dominik Schreiber 2022-12-15:
+  // Required fields previously defined as static fields
+  // in the head of propagate.cpp.
+  Clause decision_reason_clause;
+  Clause * decision_reason = &decision_reason_clause;
+
   /*----------------------------------------------------------------------*/
 
   // Asynchronous termination flag written by 'terminate' and read by
