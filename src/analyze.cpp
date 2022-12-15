@@ -413,7 +413,7 @@ void Internal::build_chain () {
           auto& el = justify_todo.back ();
           while (el.begin != el.end) {
               int lit2 = *el.begin++;
-              if (el.lit != lit2 && !justify_lit (*this, lit2)) goto next;
+              if (el.lit != lit2 && !justify_lit (*this, -lit2)) goto next;
           }
           chain.push_back (el.id);
           flags (el.lit).justified = true;
