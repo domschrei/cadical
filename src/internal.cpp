@@ -372,9 +372,15 @@ void Internal::import_redundant_clauses (int& res) {
       // the clause is a direct import to determine how to represent
       // it in the proof.  For a direct import, the "reason" comes
       // from another proof, so we need to track that the clause is 
-      // remote.
+      // remote.  For this, we emit an empty proof so that we know
+      // we need to find the proof remotely.  
+      // 
       // For a simplified input clause, the "reason" involves local 
       // clauses and also the clause id of the remote clause.
+      // 
+      // We need to add the remote clause to the "reason" *after*
+      // emitting the proof for the clause so that we can it is 
+      // part of the support set for clauses derived from it.
 
       bool is_direct_import; 
       if (importType == Internal::IMPORT_TYPE::DIRECT_IMPORT) {
@@ -399,12 +405,9 @@ void Internal::import_redundant_clauses (int& res) {
           // why do we do both of these?  Ah, one is for the proof, and one is for 
           // use in solving.
           if (proof) proof->add_derived_unit_clause(clause_id, clause[0], is_direct_import);          
-          // MWW 9/13/2022: need to add the clause to the chain, in case we derive the empty clause
-          // in assign_original_unit.
-          // Dominik Schreiber 2022-10-05: Store ID in a separate temporary variable
-          // such that it won't be overwritten by intermediate propagation.
-          // TODO Replace with something more robust.
-          last_direct_import_unit_id = clause_id;
+          // MWW 12/15/2022: now we need to add the clause to the chain, in case we derive 
+          // a clause from it. 
+          if (is_direct_import) chain.push_back(clause_id);
           assign_original_unit(clause_id, clause[0]);
       }
       else{
