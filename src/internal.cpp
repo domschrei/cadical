@@ -256,22 +256,31 @@ Internal::IMPORT_TYPE Internal::create_internal_clause(std::vector<int> cls,
     bool need_to_simplify = false;
     chain.clear();
 
-    // clause is either a singleton or has at least two elements.
-    assert (size == SINGLETON_CLAUSE_SIZE || 
-            size >= NON_SINGLETON_MIN_CLAUSE_SIZE);
-    
-    size_t i; 
-
-    // determine clause header information from imported clause
-    if (size == SINGLETON_CLAUSE_SIZE) {
-        memcpy(&clause_id, cls.data(), sizeof(clause_id_t));
-        // skip the clause id.  Glue is 1 for unit.
-        glue = 1;
-        i = 2;
+    size_t i;
+    if (internal->opts.lrat) {
+      // clause is either a singleton or has at least two elements.
+      assert (size == SINGLETON_CLAUSE_SIZE ||
+              size >= NON_SINGLETON_MIN_CLAUSE_SIZE);
+      // determine clause header information from imported clause
+      if (size == SINGLETON_CLAUSE_SIZE) {
+          memcpy(&clause_id, cls.data(), sizeof(clause_id_t));
+          // skip the clause id.  Glue is 1 for unit.
+          glue = 1;
+          i = 2;
+      } else {
+          memcpy(&clause_id, cls.data() + 1, sizeof(clause_id_t));
+          glue = cls[2];
+          i = 3;
+      }
     } else {
-        memcpy(&clause_id, cls.data() + 1, sizeof(clause_id_t));
-        glue = cls[2];
-        i = 3;
+      // no header information besides the glue value
+      clause_id = 1; // dummy
+      i = 0;
+      if (size == 1) glue = 1;
+      else {
+        glue = cls[0];
+        i++;
+      }
     }
     
     // determine clause body from imported clause, and whether to import it.
@@ -301,8 +310,10 @@ Internal::IMPORT_TYPE Internal::create_internal_clause(std::vector<int> cls,
             else{
                 //clause is false and we need to simplify the clause to import it
                 need_to_simplify = true;
-                int eidx = elit < 0 ? -elit : elit;
-                chain.push_back(external->unit_id[eidx]);
+                if (opts.lrat) {
+                  int eidx = elit < 0 ? -elit : elit;
+                  chain.push_back(external->unit_id[eidx]);
+                }
             }
         } else{
             //only include non-fixed literals in the clause
@@ -383,8 +394,10 @@ void Internal::import_redundant_clauses (int& res) {
       } else if (importType == Internal::IMPORT_TYPE::SIMPLIFIED_IMPORT) { // Simplified
         // Since this is a 'new' clause, we don't have a glue computed, so use the size
         glue = clause.size();
-        chain.push_back(clause_id); // Add imported clause to proof of the simplified clause.
-        clause_id = next_clause_id();
+        if (opts.lrat) {
+          chain.push_back(clause_id); // Add imported clause to proof of the simplified clause.
+          clause_id = next_clause_id();
+        }
         is_direct_import = false;
       } else {
         assert(false && "Missing case in import_redundant_clauses function");

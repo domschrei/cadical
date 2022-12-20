@@ -56,7 +56,7 @@ inline void Internal::vivify_assign (int lit, Clause * reason) {
   v.trail = (int) trail.size ();        // used in 'vivify_better_watch'
   v.reason = level ? reason : 0;        // for conflict analysis
   if (!level) {
-    if (proof && reason) {
+    if (opts.lrat && reason) {
       for (const_literal_iterator l = reason->begin (); l != reason->end (); l++) {
         const int lit2 = *l;
         if (lit2 == lit) continue;

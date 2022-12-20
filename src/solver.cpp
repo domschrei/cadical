@@ -719,8 +719,11 @@ void Solver::connect_learner (Learner * learner) {
     LOG ("connecting new learner (no previous one)");
 #endif
   external->learner = learner;
+  if (!external->internal->proof) {
+    external->internal->proof = new Proof(external->internal);
+  }
   LearnerObserver *lo = new LearnerObserver (external);
-  if (external->internal->proof) external->internal->proof->connect(lo);
+  external->internal->proof->connect(lo);
   LOG_API_CALL_END ("connect_learner");
 }
 
@@ -817,6 +820,17 @@ bool Solver::frozen (int lit) const {
 
 /*------------------------------------------------------------------------*/
 
+void set_lrat_options (Solver* solver) {
+  bool ok = solver->set("lrat", 1); assert(ok);
+  // disable options which don't work together with LRAT proof tracing
+  ok = solver->set("decompose", 0); assert(ok);
+  ok = solver->set("elim", 0); assert(ok);
+  ok = solver->set("probe", 0); assert(ok);
+  ok = solver->set("ternary", 0); assert(ok);
+  ok = solver->set("transred", 0); assert(ok);
+  ok = solver->set("vivify", 0); assert(ok);
+}
+
 bool Solver::trace_proof (FILE * external_file, const char * name) {
   LOG_API_CALL_BEGIN ("trace_proof", name);
   REQUIRE_VALID_STATE ();
@@ -824,6 +838,7 @@ bool Solver::trace_proof (FILE * external_file, const char * name) {
     "can only start proof tracing to '%s' right after initialization",
     name);
   REQUIRE (!internal->tracer, "already tracing proof");
+  set_lrat_options (this);
   File * internal_file = File::write (internal, external_file, name);
   assert (internal_file);
   internal->trace (internal_file);
@@ -838,17 +853,10 @@ bool Solver::trace_proof (const char * path) {
     "can only start proof tracing to '%s' right after initialization",
     path);
   REQUIRE (!internal->tracer, "already tracing proof");
+  set_lrat_options (this);
   File * internal_file = File::write (internal, path);
   bool res = (internal_file != 0);
   internal->trace (internal_file);
-  // disable options which don't work together with LRAT proof tracing
-  bool ok;
-  ok = set("decompose", 0); assert(ok);
-  ok = set("elim", 0); assert(ok);
-  ok = set("probe", 0); assert(ok);
-  ok = set("ternary", 0); assert(ok);
-  ok = set("transred", 0); assert(ok);
-  ok = set("vivify", 0); assert(ok);
   LOG_API_CALL_RETURNS ("trace_proof", path, res);
   return res;
 }

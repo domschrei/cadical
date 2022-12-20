@@ -63,7 +63,7 @@ inline void Internal::search_assign (int lit, Clause * reason) {
   else if (opts.chrono) lit_level = assignment_level (lit, reason);
   else lit_level = level;
   if (!lit_level) {
-    if (proof && chain.empty () && reason && reason != decision_reason) {
+    if (opts.lrat && chain.empty () && reason && reason != decision_reason) {
       for (const_literal_iterator l = reason->begin (); l != reason->end (); l++) {
         const int lit2 = *l;
         if (lit2 == lit) continue;

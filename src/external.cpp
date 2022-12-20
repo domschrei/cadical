@@ -515,16 +515,19 @@ void External::export_learned_empty_clause () {
 
 void External::export_learned_unit_clause (clause_id_t clause_id, int elit) {
   assert (learner);
+  int metadata_size = internal->opts.lrat ? 2 : 0;
   //1 + 2:  1 literals + 2 metedata ints for clause ID
-  if (learner->learning (1 + 2)) {
+  if (learner->learning (1 + metadata_size)) {
     LOG ("exporting learned unit clause");
 
-    //produce two ints for exporting clause ID as uint64 and export before clause
-    uint64_t u_clause_id = (uint64_t) clause_id;
-    int clause_id_ints[2];
-    memcpy(clause_id_ints, &u_clause_id, sizeof(uint64_t));
-    learner->learn (clause_id_ints[0]);
-    learner->learn (clause_id_ints[1]);
+    if (internal->opts.lrat) {
+      //produce two ints for exporting clause ID as uint64 and export before clause
+      uint64_t u_clause_id = (uint64_t) clause_id;
+      int clause_id_ints[2];
+      memcpy(clause_id_ints, &u_clause_id, sizeof(uint64_t));
+      learner->learn (clause_id_ints[0]);
+      learner->learn (clause_id_ints[1]);
+    }
 
     //already externalized
     learner->learn (elit);
@@ -537,17 +540,21 @@ void External::export_learned_large_clause (clause_id_t clause_id, const vector<
   assert (learner);
   size_t size = clause.size ();
   assert (size <= (unsigned) INT_MAX);
+  int metadata_size = internal->opts.lrat ? 2 : 0;
   //size + 2:  size literals + 2 metadata ints for clause ID
-  if (learner->learning ((int) size + 2)) {
+  if (learner->learning ((int) size + metadata_size)) {
+
     LOG ("exporting learned clause of size %zu", size);
     learner->learn (glue);
 
-    //produce two ints for exporting clause ID as uint64 and export before clause
-    uint64_t u_clause_id = (uint64_t) clause_id;
-    int clause_id_ints[2];
-    memcpy(clause_id_ints, &u_clause_id, sizeof(uint64_t));
-    learner->learn (clause_id_ints[0]);
-    learner->learn (clause_id_ints[1]);
+    if (internal->opts.lrat) {
+      //produce two ints for exporting clause ID as uint64 and export before clause
+      uint64_t u_clause_id = (uint64_t) clause_id;
+      int clause_id_ints[2];
+      memcpy(clause_id_ints, &u_clause_id, sizeof(uint64_t));
+      learner->learn (clause_id_ints[0]);
+      learner->learn (clause_id_ints[1]);
+    }
 
     //export literals of clause
     for (auto elit : clause) {

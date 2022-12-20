@@ -263,7 +263,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
     const signed char tmp = val (lit);
     if (tmp > 0) { satisfied = lit; break; }
     else if (tmp < 0) {
-      if (proof) chain.push_back (var (lit).unit_id);
+      if (opts.lrat) chain.push_back (var (lit).unit_id);
       continue;
     }
     else mark (lit), clause.push_back (lit), s++;
@@ -287,7 +287,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
     signed char tmp = val (lit);
     if (tmp > 0) { satisfied = lit; break; }
     else if (tmp < 0) {
-      if (proof) chain.push_back (var (lit).unit_id);
+      if (opts.lrat) chain.push_back (var (lit).unit_id);
       continue;
     }
     else if ((tmp = marked (lit)) < 0) { tautological = lit; break; }
@@ -315,7 +315,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
     return false;
   }
 
-  if (proof) chain.push_back (c->id), chain.push_back (d->id);
+  if (opts.lrat) chain.push_back (c->id), chain.push_back (d->id);
 
   if (!size) {
     clause.clear ();
