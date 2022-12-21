@@ -215,6 +215,27 @@ struct Internal {
   Internal * internal;          // proxy to 'this' in macros
   External * external;          // proxy to 'external' buddy in 'Solver'
 
+  // Dominik Schreiber 2022-10-05:
+  // The most recent clause ID of a "direct import" unit clause.
+  // Used in a hotfix to ensure a non-empty chain.
+  // TODO Replace with something more robust.
+  int64_t last_direct_import_unit_id;
+
+  // Dominik Schreiber 2022-12-14:
+  // Required by stack implementation of "justify_lit" (analyze.cpp).
+  struct stack_element {
+      int lit;
+      int64_t id;
+      const_literal_iterator begin, end;
+  };
+  vector<stack_element> justify_todo;
+
+  // Dominik Schreiber 2022-12-15:
+  // Required fields previously defined as static fields
+  // in the head of propagate.cpp.
+  Clause decision_reason_clause;
+  Clause * decision_reason = &decision_reason_clause;
+
   /*----------------------------------------------------------------------*/
 
   // Asynchronous termination flag written by 'terminate' and read by

@@ -375,15 +375,6 @@ struct analyze_trail_larger {
 // Fill the 'chain' variable with the LRAT style unit propagation proof of
 // newly learnt clause
 
-//static vector<signed char> justified;
-static vector<Clause*> old_reasons;
-struct stack_element {
-    int lit;
-    int64_t id;
-    const_literal_iterator begin, end;
-};
-static vector<stack_element> justify_todo;
-
 bool justify_lit (Internal& s, int lit) {
   Flags & f = s.flags (lit);
   if (f.justified) return true;
@@ -394,7 +385,7 @@ bool justify_lit (Internal& s, int lit) {
   } else {
     const Clause* c = v.reason;
     if (c) {
-        justify_todo.push_back({lit, c->id, c->begin (), c->end ()});
+        s.justify_todo.push_back({lit, c->id, c->begin (), c->end ()});
         return false;
     } else {
       // LOG ("PROOF justify %d hyp", lit);
@@ -422,7 +413,7 @@ void Internal::build_chain () {
           auto& el = justify_todo.back ();
           while (el.begin != el.end) {
               int lit2 = *el.begin++;
-              if (el.lit != lit2 && !justify_lit (*this, lit2)) goto next;
+              if (el.lit != lit2 && !justify_lit (*this, -lit2)) goto next;
           }
           chain.push_back (el.id);
           flags (el.lit).justified = true;
@@ -832,7 +823,7 @@ void Internal::analyze () {
   }
 
   // Build the chain proof for the conflict.
-  build_chain ();
+  if (internal->proof) build_chain ();
 
   // Update actual size statistics.
   //

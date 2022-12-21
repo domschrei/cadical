@@ -720,7 +720,7 @@ void Solver::connect_learner (Learner * learner) {
 #endif
   external->learner = learner;
   LearnerObserver *lo = new LearnerObserver (external);
-  external->internal->proof->connect(lo);
+  if (external->internal->proof) external->internal->proof->connect(lo);
   LOG_API_CALL_END ("connect_learner");
 }
 
@@ -841,6 +841,14 @@ bool Solver::trace_proof (const char * path) {
   File * internal_file = File::write (internal, path);
   bool res = (internal_file != 0);
   internal->trace (internal_file);
+  // disable options which don't work together with LRAT proof tracing
+  bool ok;
+  ok = set("decompose", 0); assert(ok);
+  ok = set("elim", 0); assert(ok);
+  ok = set("probe", 0); assert(ok);
+  ok = set("ternary", 0); assert(ok);
+  ok = set("transred", 0); assert(ok);
+  ok = set("vivify", 0); assert(ok);
   LOG_API_CALL_RETURNS ("trace_proof", path, res);
   return res;
 }

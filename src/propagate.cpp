@@ -15,8 +15,7 @@ namespace CaDiCaL {
 // a zero pointer as reason.  Now only units have a zero reason and
 // decisions need to use the pseudo reason 'decision_reason'.
 
-static Clause decision_reason_clause;
-static Clause * decision_reason = &decision_reason_clause;
+// D.S. 2022-12-15: Moved static fields to be non-static members of Internal
 
 // If chronological backtracking is used the actual assignment level might
 // be lower than the current decision level. In this case the assignment
