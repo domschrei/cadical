@@ -402,8 +402,6 @@ void Internal::import_redundant_clauses (int& res) {
           if (proof) proof->add_derived_empty_clause(clause_id);
       }
       else if (size == 1){
-          // why do we do both of these?  Ah, one is for the proof, and one is for 
-          // use in solving.
           if (proof) proof->add_derived_unit_clause(clause_id, clause[0], is_direct_import);          
           // MWW 12/15/2022: now we need to add the clause to the chain, in case we derive 
           // a clause from it. 
@@ -414,6 +412,9 @@ void Internal::import_redundant_clauses (int& res) {
           external->check_learned_clause ();
           Clause *new_built_clause = new_clause(clause_id, true, glue);
           if (proof) proof->add_derived_clause(new_built_clause, is_direct_import);
+          // MWW 12/15/2022: now we need to add the clause to the chain, in case we derive 
+          // a clause from it. 
+          if (is_direct_import) chain.push_back(clause_id);
           assert (watching());
           watch_clause (new_built_clause);
       }
