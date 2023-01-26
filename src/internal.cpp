@@ -403,9 +403,10 @@ void Internal::import_redundant_clauses (int& res) {
       }
       else if (size == 1){
           if (proof) proof->add_derived_unit_clause(clause_id, clause[0], is_direct_import);          
+          
           // MWW 12/15/2022: now we need to add the clause to the chain, in case we derive 
           // a clause from it. 
-          if (is_direct_import) chain.push_back(clause_id);
+          chain.push_back(clause_id);
           assign_original_unit(clause_id, clause[0]);
       }
       else{
@@ -414,7 +415,6 @@ void Internal::import_redundant_clauses (int& res) {
           if (proof) proof->add_derived_clause(new_built_clause, is_direct_import);
           // MWW 12/15/2022: now we need to add the clause to the chain, in case we derive 
           // a clause from it. 
-          if (is_direct_import) chain.push_back(clause_id);
           assert (watching());
           watch_clause (new_built_clause);
       }
