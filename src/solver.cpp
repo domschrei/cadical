@@ -763,6 +763,10 @@ Solver::Statistics Solver::get_stats () {
   return s;
 }
 
+unsigned long& Solver::get_access_counter () {
+  return internal->access_counter;
+}
+
 /*===== IPASIR END =======================================================*/
 
 int Solver::active () const {

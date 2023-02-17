@@ -236,6 +236,8 @@ struct Internal {
   Clause decision_reason_clause;
   Clause * decision_reason = &decision_reason_clause;
 
+  mutable unsigned long access_counter {0};
+
   /*----------------------------------------------------------------------*/
 
   // Asynchronous termination flag written by 'terminate' and read by
@@ -1102,6 +1104,7 @@ struct Internal {
     assert (-max_var <= lit);
     assert (lit);
     assert (lit <= max_var);
+    ++access_counter;
     return vals[lit];
   }
 
