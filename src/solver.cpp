@@ -754,6 +754,11 @@ Solver::Statistics Solver::get_stats () {
   s.propagations += internal->stats.propagations.vivify;
   s.propagations += internal->stats.propagations.walk;
   s.restarts = internal->stats.restarts;
+  s.imported = internal->stats.clauseimport.imported;
+  s.discarded = internal->stats.clauseimport.discarded;
+  s.r_el = internal->stats.clauseimport.r_el;
+  s.r_fx = internal->stats.clauseimport.r_fx;
+  s.r_wit = internal->stats.clauseimport.r_wit;
   return s;
 }
 

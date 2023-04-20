@@ -250,6 +250,7 @@ void Internal::import_redundant_clauses (int& res) {
 
       // Analyze clause literals
       bool addClause = true;
+      bool hasFixedLits = false;
       for (size_t i = 1; i < size; i++) {
 
         int elit = cls[i];
@@ -257,6 +258,7 @@ void Internal::import_redundant_clauses (int& res) {
 
         if (external->marked (external->witness, elit)) {
           // Literal marked as witness: Cannot import
+          internal->stats.clauseimport.r_wit++;
           addClause = false; break;
         }
 
@@ -265,13 +267,16 @@ void Internal::import_redundant_clauses (int& res) {
         auto& f = flags (ilit);
         if (f.eliminated ()) {
           // Literal has been eliminated: do not add this clause.
+          internal->stats.clauseimport.r_el++;
           addClause = false; break;
         } else if (f.fixed ()) {
           // Literal is fixed
           if (val (ilit) == 1) {
             // TRUE: Clause can be omitted.
+            internal->stats.clauseimport.r_fx++;
             addClause = false; break;
           } // else: FALSE - literal can be omitted.
+          hasFixedLits = true;
         } else {
           // Active, pure, or substituted: Can treat literal normally.
           clause.push_back (ilit);
@@ -281,6 +286,7 @@ void Internal::import_redundant_clauses (int& res) {
 
       if (!addClause) {
         //printf("Discard clause\n");
+        internal->stats.clauseimport.discarded++;
         clause.clear ();
         continue;
       }
@@ -295,6 +301,12 @@ void Internal::import_redundant_clauses (int& res) {
         assert (watching ());
         watch_clause (res);
         unitLit = 0;
+        internal->stats.clauseimport.imported++;
+      } else if (clause.size() == 1) {
+        unitLit = clause[0];
+      } else {
+        if (hasFixedLits) internal->stats.clauseimport.r_fx++;
+        internal->stats.clauseimport.discarded++;
       }
 
       clause.clear ();
@@ -302,21 +314,29 @@ void Internal::import_redundant_clauses (int& res) {
 
     // Try to learn unit clause
     if (unitLit != 0) {
-      bool add = true;
       if (external->marked (external->witness, unitLit)) {
         // Do not learn unit clause if marked as witness
+        internal->stats.clauseimport.r_wit++;
+        internal->stats.clauseimport.discarded++;
         continue;
       }
       int ilit = external->internalize (unitLit);
       auto& f = flags(ilit);
       if (f.eliminated () || f.substituted ()) {
         // Do not import eliminated or substituted literal
+        internal->stats.clauseimport.r_el++;
+        internal->stats.clauseimport.discarded++;
         continue;
       }
       // Do not import units which are already fixed
-      if (f.status == Flags::FIXED) continue;
+      if (f.status == Flags::FIXED) {
+        internal->stats.clauseimport.r_fx++;
+        internal->stats.clauseimport.discarded++;
+        continue;
+      }
       // Actually add the unit clause
-      if (add) assign_original_unit (ilit);
+      assign_original_unit (ilit);
+      internal->stats.clauseimport.imported++;
     }
 
     // Stop importing if SAT or UNSAT was found
