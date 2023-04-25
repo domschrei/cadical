@@ -265,7 +265,7 @@ void Internal::import_redundant_clauses (int& res) {
         int ilit = external->internalize(elit);
 
         auto& f = flags (ilit);
-        if (f.eliminated ()) {
+        if (f.eliminated () || f.substituted ()) {
           // Literal has been eliminated: do not add this clause.
           internal->stats.clauseimport.r_el++;
           addClause = false; break;
@@ -278,7 +278,7 @@ void Internal::import_redundant_clauses (int& res) {
           } // else: FALSE - literal can be omitted.
           hasFixedLits = true;
         } else {
-          // Active, pure, or substituted: Can treat literal normally.
+          // Can treat literal normally.
           clause.push_back (ilit);
           unitLit = elit;
         }
@@ -303,7 +303,7 @@ void Internal::import_redundant_clauses (int& res) {
         unitLit = 0;
         internal->stats.clauseimport.imported++;
       } else if (clause.size() == 1) {
-        unitLit = clause[0];
+        unitLit = internal->externalize (clause[0]);
       } else {
         if (hasFixedLits) internal->stats.clauseimport.r_fx++;
         internal->stats.clauseimport.discarded++;
