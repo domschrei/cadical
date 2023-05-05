@@ -296,7 +296,7 @@ void Internal::import_redundant_clauses (int& res) {
       if (clause.size () >= 2) {
         //printf("Learn non-unit clause\n");
         external->check_learned_clause ();
-        Clause * res = new_clause (true, glue);
+        Clause * res = new_clause (true, glue, true);
         if (proof) proof->add_derived_clause (res);
         assert (watching ());
         watch_clause (res);

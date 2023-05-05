@@ -68,7 +68,7 @@ void Internal::mark_added (Clause * c) {
 
 /*------------------------------------------------------------------------*/
 
-Clause * Internal::new_clause (bool red, int glue) {
+Clause * Internal::new_clause (bool red, int glue, bool importing) {
 
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();
@@ -138,7 +138,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   if (likely_to_be_kept_clause (c)) mark_added (c);
 
   // export redundant clause
-  if (red) external->export_learned_large_clause(clause, glue);
+  if (red && !importing) external->export_learned_large_clause(clause, glue);
 
   return c;
 }
