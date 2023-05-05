@@ -24,6 +24,7 @@ void Internal::learn_unit_clause (int lit) {
   LOG ("learned unit clause %d", lit);
   external->check_learned_unit_clause (lit);
   if (proof) proof->add_derived_unit_clause (lit);
+  external->export_learned_unit_clause (lit);
   mark_fixed (lit);
 }
 
@@ -742,10 +743,7 @@ void Internal::analyze () {
     //
     if (opts.bump)
       bump_variables();
-
-    if (external->learner) external->export_learned_large_clause (clause, glue);
-  } else if (external->learner)
-    external->export_learned_unit_clause(-uip);
+  }
 
   // Update actual size statistics.
   //

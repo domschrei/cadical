@@ -137,6 +137,9 @@ Clause * Internal::new_clause (bool red, int glue) {
 
   if (likely_to_be_kept_clause (c)) mark_added (c);
 
+  // export redundant clause
+  if (red) external->export_learned_large_clause(clause, glue);
+
   return c;
 }
 
