@@ -240,6 +240,7 @@ void Internal::import_redundant_clauses (int& res) {
     assert (size > 0);
     int unitLit = size == 1 ? cls[0] : 0;
     assert (clause.empty ());
+    bool reducedSize = false;
 
     if (unitLit == 0) {
       // Learn non-unit clause
@@ -290,13 +291,14 @@ void Internal::import_redundant_clauses (int& res) {
         clause.clear ();
         continue;
       }
+      reducedSize = clause.size () < size-1;
 
       // Handle clause of size >= 2 being learnt
       // (unit clauses are handled below)
       if (clause.size () >= 2) {
         //printf("Learn non-unit clause\n");
         external->check_learned_clause ();
-        Clause * res = new_clause (true, glue, true);
+        Clause * res = new_clause (true, glue, !reducedSize);
         if (proof) proof->add_derived_clause (res);
         assert (watching ());
         watch_clause (res);
@@ -337,6 +339,7 @@ void Internal::import_redundant_clauses (int& res) {
       // Actually add the unit clause
       assign_original_unit (ilit);
       internal->stats.clauseimport.imported++;
+      if (reducedSize) external->export_learned_unit_clause (ilit);
     }
 
     // Stop importing if SAT or UNSAT was found

@@ -115,6 +115,9 @@ Clause * Internal::new_clause (bool red, int glue, bool importing) {
 
   for (int i = 0; i < size; i++) c->literals[i] = clause[i];
 
+  // export redundant clause
+  if (red && !importing) external->export_learned_large_clause(clause, glue);
+
   // Just checking that we did not mess up our sophisticated memory layout.
   // This might be compiler dependent though. Crucial for correctness.
   //
@@ -136,9 +139,6 @@ Clause * Internal::new_clause (bool red, int glue, bool importing) {
   LOG (c, "new pointer %p", (void*) c);
 
   if (likely_to_be_kept_clause (c)) mark_added (c);
-
-  // export redundant clause
-  if (red && !importing) external->export_learned_large_clause(clause, glue);
 
   return c;
 }
