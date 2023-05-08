@@ -235,7 +235,7 @@ void Internal::import_redundant_clauses (int& res) {
 
     // Fetch pointer to 1st literal and size of the clause (plus glue)
     auto cls = external->learnSource->getNextClause ();
-    size_t size = cls.size ();
+    const size_t size = cls.size ();
     //printf("Import clause of size %lu\n", size);
     assert (size > 0);
     int unitLit = size == 1 ? cls[0] : 0;
