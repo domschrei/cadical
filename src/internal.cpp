@@ -251,7 +251,6 @@ void Internal::import_redundant_clauses (int& res) {
 
       // Analyze clause literals
       bool addClause = true;
-      bool hasFixedLits = false;
       for (size_t i = 1; i < size; i++) {
 
         int elit = cls[i];
@@ -277,7 +276,7 @@ void Internal::import_redundant_clauses (int& res) {
             internal->stats.clauseimport.r_fx++;
             addClause = false; break;
           } // else: FALSE - literal can be omitted.
-          hasFixedLits = true;
+          reducedSize = true;
         } else {
           // Can treat literal normally.
           clause.push_back (ilit);
@@ -291,14 +290,13 @@ void Internal::import_redundant_clauses (int& res) {
         clause.clear ();
         continue;
       }
-      reducedSize = clause.size () < size-1;
 
       // Handle clause of size >= 2 being learnt
       // (unit clauses are handled below)
       if (clause.size () >= 2) {
         //printf("Learn non-unit clause\n");
         external->check_learned_clause ();
-        Clause * res = new_clause (true, glue, !reducedSize);
+        Clause * res = new_clause (true, glue, reducedSize);
         if (proof) proof->add_derived_clause (res);
         assert (watching ());
         watch_clause (res);
@@ -307,7 +305,7 @@ void Internal::import_redundant_clauses (int& res) {
       } else if (clause.size() == 1) {
         unitLit = internal->externalize (clause[0]);
       } else {
-        if (hasFixedLits) internal->stats.clauseimport.r_fx++;
+        if (reducedSize) internal->stats.clauseimport.r_fx++;
         internal->stats.clauseimport.discarded++;
       }
 
