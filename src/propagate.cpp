@@ -368,8 +368,8 @@ bool Internal::propagate () {
       if (opts.fanout) {
         internal->nb_fan_out_decisions = 0;
         if (--internal->nb_conflicts_until_fan_out == 0) {
-          internal->nb_conflicts_until_fan_out = 1'000;
-          internal->nb_fan_out_decisions = 100;
+          internal->nb_conflicts_until_fan_out = opts.fanoutconflint;
+          internal->nb_fan_out_decisions = opts.fanoutdepth;
         }
       }
 

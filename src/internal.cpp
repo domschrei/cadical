@@ -709,7 +709,7 @@ int Internal::local_search () {
 int Internal::solve (bool preprocess_only) {
 
   fan_out_rng = Random(opts.seed);
-  nb_conflicts_until_fan_out = 1'000;
+  nb_conflicts_until_fan_out = opts.fanoutconflint;
   nb_fan_out_decisions = 0;
 
   assert (clause.empty ());

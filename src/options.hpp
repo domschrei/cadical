@@ -90,6 +90,8 @@ OPTION( emasize,         1e5,  1,2e9,0,0,1, "window learned clause size") \
 OPTION( ematrailfast,    1e2,  1,2e9,0,0,1, "window fast trail") \
 OPTION( ematrailslow,    1e5,  1,2e9,0,0,1, "window slow trail") \
 OPTION( fanout,            0,  0,  1,0,0,1, "make X random variable decisions every Y conflicts") \
+OPTION( fanoutconflint, 1000,  1,2e9,0,0,1, "# conflicts in between fanouts") \
+OPTION( fanoutdepth,     100,  1,2e9,0,0,1, "# random decisions per fanout") \
 OPTION( flush,             0,  0,  1,0,0,1, "flush redundant clauses") \
 OPTION( flushfactor,       3,  1,1e3,0,0,1, "interval increase") \
 OPTION( flushint,        1e5,  1,2e9,0,0,1, "initial limit") \
