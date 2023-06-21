@@ -37,6 +37,7 @@ int Internal::next_decision_variable_with_best_score () {
       old_score = stab[rnd_var];
       stab[rnd_var] = std::numeric_limits<double>::max();
       scores.update (rnd_var);
+      //printf("FAN_OUT v=%i\n", rnd_var);
     }
 
     res = scores.front ();

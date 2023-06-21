@@ -363,15 +363,18 @@ bool Internal::propagate () {
     if (!conflict) no_conflict_until = propagated;
     else {
 
-      if (stable) stats.stabconflicts++;
-      stats.conflicts++;
-      if (opts.fanout) {
-        internal->nb_fan_out_decisions = 0;
-        if (--internal->nb_conflicts_until_fan_out == 0) {
-          internal->nb_conflicts_until_fan_out = opts.fanoutconflint;
-          internal->nb_fan_out_decisions = opts.fanoutdepth;
+      if (stable) {
+        stats.stabconflicts++;
+        if (opts.fanout) {
+          //if (internal->nb_fan_out_decisions) printf("STOP FAN_OUT\n");
+          internal->nb_fan_out_decisions = 0;
+          if (--internal->nb_conflicts_until_fan_out == 0) {
+            internal->nb_conflicts_until_fan_out = opts.fanoutconflint;
+            internal->nb_fan_out_decisions = opts.fanoutdepth;
+          }
         }
       }
+      stats.conflicts++;
 
       LOG (conflict, "conflict");
 
