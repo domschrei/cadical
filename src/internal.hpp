@@ -212,6 +212,10 @@ struct Internal {
   Internal * internal;          // proxy to 'this' in macros
   External * external;          // proxy to 'external' buddy in 'Solver'
 
+  Random fan_out_rng;
+  int nb_conflicts_until_fan_out;
+  int nb_fan_out_decisions;
+
   /*----------------------------------------------------------------------*/
 
   // Asynchronous termination flag written by 'terminate' and read by

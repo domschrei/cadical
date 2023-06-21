@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include <limits>
 
 namespace CaDiCaL {
 
@@ -26,8 +27,28 @@ int Internal::next_decision_variable_on_queue () {
 //
 int Internal::next_decision_variable_with_best_score () {
   int res = 0;
+  bool fan_out = internal->nb_fan_out_decisions;
+  double old_score;
+  int rnd_var;
   for (;;) {
+    if (fan_out) {
+      auto rnd_idx = internal->fan_out_rng.pick_int (0, scores.size () - 1);
+      rnd_var = scores.at (rnd_idx);
+      old_score = stab[rnd_var];
+      stab[rnd_var] = std::numeric_limits<double>::max();
+      scores.update (rnd_var);
+    }
+
     res = scores.front ();
+
+    if (fan_out) {
+      if (res != rnd_var) abort ();
+      stab[rnd_var] = old_score;
+      if (--internal->nb_fan_out_decisions == 0) {
+        fan_out = false;
+      }
+    }
+
     if (!val (res)) break;
     (void) scores.pop_front ();
   }

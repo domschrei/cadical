@@ -365,6 +365,13 @@ bool Internal::propagate () {
 
       if (stable) stats.stabconflicts++;
       stats.conflicts++;
+      if (opts.fanout) {
+        internal->nb_fan_out_decisions = 0;
+        if (--internal->nb_conflicts_until_fan_out == 0) {
+          internal->nb_conflicts_until_fan_out = 1'000;
+          internal->nb_fan_out_decisions = 100;
+        }
+      }
 
       LOG (conflict, "conflict");
 

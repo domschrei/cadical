@@ -129,6 +129,10 @@ public:
     return pos[e] != invalid_heap_position;
   }
 
+  unsigned at (size_t pos) const {
+    return array[pos];
+  }
+
   // Add a new (not contained) element 'e' to the heap.
   //
   void push_back (unsigned e) {
