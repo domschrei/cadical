@@ -1023,6 +1023,9 @@ bool Solver::trace_proof (FILE *external_file, const char *name) {
   File *internal_file = File::write (internal, external_file, name);
   assert (internal_file);
   internal->trace (internal_file);
+  if (internal->opts.lrat && internal->opts.lratsolvercount > 1) {
+    internal->reserve_ids (internal->opts.lratorigclscount);
+  }
   LOG_API_CALL_RETURNS ("trace_proof", name, true);
   return true;
 }
@@ -1037,6 +1040,9 @@ bool Solver::trace_proof (const char *path) {
   File *internal_file = File::write (internal, path);
   bool res = (internal_file != 0);
   internal->trace (internal_file);
+  if (internal->opts.lrat && internal->opts.lratsolvercount > 1) {
+    internal->reserve_ids (internal->opts.lratorigclscount);
+  }
   LOG_API_CALL_RETURNS ("trace_proof", path, res);
   return res;
 }

@@ -1461,6 +1461,17 @@ struct Internal {
   // Warning messages.
   //
   void warning (const char *, ...) CADICAL_ATTRIBUTE_FORMAT (2, 3);
+
+  uint64_t next_lrat_id () {
+    if (opts.lratsolvercount <= 1) {
+      ++clause_id;
+    } else {
+      auto current_remainder = clause_id % opts.lratsolvercount;
+      clause_id += opts.lratsolverid - current_remainder;
+      clause_id += opts.lratsolvercount;
+    }
+    return clause_id;
+  }
 };
 
 // Fatal internal error which leads to abort.

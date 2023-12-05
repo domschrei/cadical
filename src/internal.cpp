@@ -172,7 +172,7 @@ void Internal::add_original_lit (int lit) {
     original.push_back (lit);
   } else {
     const uint64_t id =
-        original_id < reserved_ids ? ++original_id : ++clause_id;
+        original_id < reserved_ids ? ++original_id : next_lrat_id ();
     if (proof) {
       // Use the external form of the clause for printing in proof
       // Externalize(internalized literal) != external literal

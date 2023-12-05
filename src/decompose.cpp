@@ -462,7 +462,7 @@ bool Internal::decompose_round () {
       assert (!lrat_chain.empty ());
     }
 
-    const uint64_t id1 = ++clause_id;
+    const uint64_t id1 = next_lrat_id ();
     if (proof) {
       proof->add_derived_clause (id1, false, clause, lrat_chain);
       proof->weaken_minus (id1, clause);
@@ -482,7 +482,7 @@ bool Internal::decompose_round () {
       build_lrat_for_clause (dfs_chains);
       assert (!lrat_chain.empty ());
     }
-    const uint64_t id2 = ++clause_id;
+    const uint64_t id2 = next_lrat_id ();
     if (proof) {
       proof->add_derived_clause (id2, false, clause, lrat_chain);
       proof->weaken_minus (id2, clause);
@@ -631,7 +631,7 @@ bool Internal::decompose_round () {
       if (!c->redundant)
         mark_removed (c);
       if (proof) {
-        proof->add_derived_clause (++clause_id, c->redundant, clause,
+        proof->add_derived_clause (next_lrat_id (), c->redundant, clause,
                                    lrat_chain);
         proof->delete_clause (c);
         c->id = clause_id;

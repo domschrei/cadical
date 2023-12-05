@@ -17,7 +17,7 @@ void Internal::learn_empty_clause () {
   build_chain_for_empty ();
   LOG ("learned empty clause");
   external->check_learned_empty_clause ();
-  int64_t id = ++clause_id;
+  int64_t id = next_lrat_id ();
   if (proof) {
     proof->add_derived_empty_clause (id, lrat_chain);
   }
@@ -31,7 +31,7 @@ void Internal::learn_unit_clause (int lit) {
   assert (!unsat);
   LOG ("learned unit clause %d", lit);
   external->check_learned_unit_clause (lit);
-  int64_t id = ++clause_id;
+  int64_t id = next_lrat_id ();
   const unsigned uidx = vlit (lit);
   unit_clauses[uidx] = id;
   if (proof) {

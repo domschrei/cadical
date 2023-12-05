@@ -190,7 +190,7 @@ void Internal::failing () {
             lrat_chain.push_back (id);
           }
         }
-        proof->add_assumption_clause (++clause_id, -efailed, lrat_chain);
+        proof->add_assumption_clause (next_lrat_id (), -efailed, lrat_chain);
         conclusion.push_back (clause_id);
         lrat_chain.clear ();
       }
@@ -207,7 +207,7 @@ void Internal::failing () {
       f.failed |= bit;
       if (proof) {
         vector<int> clash = {externalize (failed), externalize (-failed)};
-        proof->add_assumption_clause (++clause_id, clash, lrat_chain);
+        proof->add_assumption_clause (next_lrat_id (), clash, lrat_chain);
         conclusion.push_back (clause_id);
       }
       goto DONE;
@@ -376,7 +376,7 @@ void Internal::failing () {
         vector<int> eclause;
         for (auto &lit : clause)
           eclause.push_back (externalize (lit));
-        proof->add_assumption_clause (++clause_id, eclause, lrat_chain);
+        proof->add_assumption_clause (next_lrat_id (), eclause, lrat_chain);
         conclusion.push_back (clause_id);
       }
     } else {
@@ -403,7 +403,7 @@ void Internal::failing () {
           vector<int> eclause;
           for (auto &lit : clause)
             eclause.push_back (externalize (lit));
-          proof->add_assumption_clause (++clause_id, eclause, lrat_chain);
+          proof->add_assumption_clause (next_lrat_id (), eclause, lrat_chain);
           conclusion.push_back (clause_id);
           lrat_chain.clear ();
         }
@@ -427,7 +427,7 @@ void Internal::failing () {
               lrat_chain.push_back (id);
             }
           }
-          proof->add_assumption_clause (++clause_id, -elit, lrat_chain);
+          proof->add_assumption_clause (next_lrat_id (), -elit, lrat_chain);
           conclusion.push_back (clause_id);
           lrat_chain.clear ();
         }

@@ -96,7 +96,7 @@ Clause * Internal::new_clause (bool red, int glue, bool doExport, uint64_t id) {
   Clause *c = (Clause *) new char[bytes];
 
   stats.added.total++;
-  c->id = id == 0 ? ++clause_id : id;
+  c->id = id == 0 ? next_lrat_id () : id;
 
   c->conditioned = false;
   c->covered = false;
@@ -456,7 +456,7 @@ void Internal::add_new_original_clause (uint64_t id) {
     uint64_t new_id = id;
     const size_t size = clause.size ();
     if (original.size () > size) {
-      new_id = ++clause_id;
+      new_id = next_lrat_id ();
       if (proof) {
         if (lrat)
           lrat_chain.push_back (id);
