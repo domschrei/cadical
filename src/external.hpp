@@ -94,8 +94,8 @@ struct External {
   LearnSource *learnSource;
 
   void export_learned_empty_clause ();
-  void export_learned_unit_clause (int ilit);
-  void export_learned_large_clause (const vector<int> &, int glue);
+  void export_learned_unit_clause (uint64_t id, int ilit);
+  void export_learned_large_clause (uint64_t id, const vector<int> &, int glue);
 
   // If there is an external propagator.
 

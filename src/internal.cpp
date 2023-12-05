@@ -299,8 +299,10 @@ void Internal::import_redundant_clauses (int& res) {
   // Import external clauses.
   while (external->learnSource->hasNextClause ()) {
 
-    // Fetch pointer to 1st literal and size of the clause (plus glue)
-    auto cls = external->learnSource->getNextClause ();
+    // Fetch pointer to 1st literal and size of the clause (plus ID, glue)
+    uint64_t id;
+    int glue;
+    auto cls = external->learnSource->getNextClause (id, glue);
     const size_t size = cls.size ();
     //printf("Import clause of size %lu\n", size);
     assert (size > 0);
@@ -310,14 +312,11 @@ void Internal::import_redundant_clauses (int& res) {
 
     if (unitLit == 0) {
       // Learn non-unit clause
-
-      // Glue int at the front
-      int glue = cls[0];
       assert (glue > 0);
 
       // Analyze clause literals
       bool addClause = true;
-      for (size_t i = 1; i < size; i++) {
+      for (size_t i = 0; i < size; i++) {
 
         int elit = cls[i];
         assert (elit != 0);
@@ -362,7 +361,7 @@ void Internal::import_redundant_clauses (int& res) {
       if (clause.size () >= 2) {
         //printf("Learn non-unit clause\n");
         external->check_learned_clause ();
-        Clause * res = new_clause (true, glue, reducedSize);
+        Clause * res = new_clause (true, glue, reducedSize, id);
         if (proof) proof->add_derived_clause (res, lrat_chain);
         assert (watching ());
         watch_clause (res);
@@ -403,7 +402,7 @@ void Internal::import_redundant_clauses (int& res) {
       // Actually add the unit clause
       assign_original_unit (++clause_id, ilit);
       internal->stats.clauseimport.imported++;
-      if (reducedSize) external->export_learned_unit_clause (ilit);
+      if (reducedSize) external->export_learned_unit_clause (id, ilit);
     }
 
     // Stop importing if SAT or UNSAT was found

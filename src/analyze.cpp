@@ -37,7 +37,7 @@ void Internal::learn_unit_clause (int lit) {
   if (proof) {
     proof->add_derived_unit_clause (id, lit, lrat_chain);
   }
-  external->export_learned_unit_clause (lit);
+  external->export_learned_unit_clause (id, lit);
   mark_fixed (lit);
 }
 

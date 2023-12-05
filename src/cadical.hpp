@@ -1099,14 +1099,15 @@ class Learner {
 public:
   virtual ~Learner () {}
   virtual bool learning (int size) = 0;
-  virtual void learn (int lit) = 0;
+  virtual void append_literal (int lit) = 0;
+  virtual void publish_clause (uint64_t id, int glue) = 0;
 };
 
 class LearnSource {
 public:
   virtual ~LearnSource () { }
   virtual bool hasNextClause () = 0;
-  virtual const std::vector<int>& getNextClause () = 0;
+  virtual const std::vector<int>& getNextClause (uint64_t& id, int& glue) = 0;
 };
 
 /*------------------------------------------------------------------------*/

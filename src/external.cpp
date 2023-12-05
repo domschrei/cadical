@@ -823,36 +823,35 @@ void External::export_learned_empty_clause () {
   assert (learner);
   if (learner->learning (0)) {
     LOG ("exporting learned empty clause");
-    learner->learn (0);
+    learner->publish_clause (0, 0);
   } else
     LOG ("not exporting learned empty clause");
 }
 
-void External::export_learned_unit_clause (int ilit) {
+void External::export_learned_unit_clause (uint64_t id, int ilit) {
   if (!learner) return;
   if (learner->learning (1)) {
     LOG ("exporting learned unit clause");
     const int elit = internal->externalize (ilit);
     assert (elit);
-    learner->learn (elit);
-    learner->learn (0);
+    learner->append_literal (elit);
+    learner->publish_clause (id, 1);
   } else
     LOG ("not exporting learned unit clause");
 }
 
-void External::export_learned_large_clause (const vector<int> & clause, int glue) {
+void External::export_learned_large_clause (uint64_t id, const vector<int> & clause, int glue) {
   if (!learner) return;
   size_t size = clause.size ();
   assert (size <= (unsigned) INT_MAX);
   if (learner->learning ((int) size)) {
     LOG ("exporting learned clause of size %zu", size);
-    learner->learn (glue);
     for (auto ilit : clause) {
       const int elit = internal->externalize (ilit);
       assert (elit);
-      learner->learn (elit);
+      learner->append_literal (elit);
     }
-    learner->learn (0);
+    learner->publish_clause (id, glue);
   } else
     LOG ("not exporting learned clause of size %zu", size);
 }

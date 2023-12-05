@@ -73,7 +73,7 @@ void Internal::mark_added (Clause *c) {
 
 /*------------------------------------------------------------------------*/
 
-Clause * Internal::new_clause (bool red, int glue, bool doExport) {
+Clause * Internal::new_clause (bool red, int glue, bool doExport, uint64_t id) {
 
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();
@@ -96,7 +96,7 @@ Clause * Internal::new_clause (bool red, int glue, bool doExport) {
   Clause *c = (Clause *) new char[bytes];
 
   stats.added.total++;
-  c->id = ++clause_id;
+  c->id = id == 0 ? ++clause_id : id;
 
   c->conditioned = false;
   c->covered = false;
@@ -124,7 +124,7 @@ Clause * Internal::new_clause (bool red, int glue, bool doExport) {
     c->literals[i] = clause[i];
 
   // export redundant clause
-  if (red && doExport) external->export_learned_large_clause (clause, glue);
+  if (red && doExport) external->export_learned_large_clause (c->id, clause, glue);
 
   // Just checking that we did not mess up our sophisticated memory layout.
   // This might be compiler dependent though. Crucial for correctness.

@@ -568,7 +568,7 @@ struct Internal {
   // Managing clauses in 'clause.cpp'.  Without explicit 'Clause' argument
   // these functions work on the global temporary 'clause'.
   //
-  Clause * new_clause (bool red, int glue = 0, bool doExport = true);
+  Clause * new_clause (bool red, int glue = 0, bool doExport = true, uint64_t id = 0);
   void promote_clause (Clause *, int new_glue);
   size_t shrink_clause (Clause *, int new_size);
   void minimize_sort_clause ();
