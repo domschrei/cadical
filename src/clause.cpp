@@ -73,7 +73,7 @@ void Internal::mark_added (Clause *c) {
 
 /*------------------------------------------------------------------------*/
 
-Clause *Internal::new_clause (bool red, int glue) {
+Clause * Internal::new_clause (bool red, int glue, bool doExport) {
 
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();
@@ -122,6 +122,9 @@ Clause *Internal::new_clause (bool red, int glue) {
 
   for (int i = 0; i < size; i++)
     c->literals[i] = clause[i];
+
+  // export redundant clause
+  if (red && doExport) external->export_learned_large_clause (clause, glue);
 
   // Just checking that we did not mess up our sophisticated memory layout.
   // This might be compiler dependent though. Crucial for correctness.

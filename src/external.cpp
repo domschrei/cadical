@@ -4,7 +4,7 @@ namespace CaDiCaL {
 
 External::External (Internal *i)
     : internal (i), max_var (0), vsize (0), extended (false), concluded (false),
-      terminator (0), learner (0), propagator (0), solution (0),
+      terminator (0), learner (0), learnSource (0), propagator (0), solution (0),
       vars (max_var) {
   assert (internal);
   assert (!internal->external);
@@ -829,7 +829,7 @@ void External::export_learned_empty_clause () {
 }
 
 void External::export_learned_unit_clause (int ilit) {
-  assert (learner);
+  if (!learner) return;
   if (learner->learning (1)) {
     LOG ("exporting learned unit clause");
     const int elit = internal->externalize (ilit);
@@ -840,12 +840,13 @@ void External::export_learned_unit_clause (int ilit) {
     LOG ("not exporting learned unit clause");
 }
 
-void External::export_learned_large_clause (const vector<int> &clause) {
-  assert (learner);
+void External::export_learned_large_clause (const vector<int> & clause, int glue) {
+  if (!learner) return;
   size_t size = clause.size ();
   assert (size <= (unsigned) INT_MAX);
   if (learner->learning ((int) size)) {
     LOG ("exporting learned clause of size %zu", size);
+    learner->learn (glue);
     for (auto ilit : clause) {
       const int elit = internal->externalize (ilit);
       assert (elit);

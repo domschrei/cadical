@@ -201,6 +201,7 @@ class Tracer;
 class InternalTracer;
 class FileTracer;
 class StatTracer;
+class LearnSource;
 
 /*------------------------------------------------------------------------*/
 
@@ -344,6 +345,21 @@ public:
   //
   void connect_learner (Learner *learner);
   void disconnect_learner ();
+
+  void connect_learn_source (LearnSource * learnSource);
+  void disconnect_learn_source ();
+
+  struct Statistics {
+    int64_t conflicts;    // generated conflicts in 'propagate'
+    int64_t decisions;    // number of decisions in 'decide'
+    int64_t propagations; // total # propagations
+    int64_t restarts;     // total # restarts
+    // monitoring of internally imported / discarded clauses
+    unsigned long imported;
+    unsigned long discarded;
+    unsigned long r_wit,r_el,r_fx;
+  };
+  Statistics get_stats ();
 
   // ====== END IPASIR =====================================================
 
@@ -1084,6 +1100,13 @@ public:
   virtual ~Learner () {}
   virtual bool learning (int size) = 0;
   virtual void learn (int lit) = 0;
+};
+
+class LearnSource {
+public:
+  virtual ~LearnSource () { }
+  virtual bool hasNextClause () = 0;
+  virtual const std::vector<int>& getNextClause () = 0;
 };
 
 /*------------------------------------------------------------------------*/

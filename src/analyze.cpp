@@ -37,6 +37,7 @@ void Internal::learn_unit_clause (int lit) {
   if (proof) {
     proof->add_derived_unit_clause (id, lit, lrat_chain);
   }
+  external->export_learned_unit_clause (lit);
   mark_fixed (lit);
 }
 
@@ -1141,12 +1142,8 @@ void Internal::analyze () {
     // Update decision heuristics.
     //
     if (opts.bump)
-      bump_variables ();
-
-    if (external->learner)
-      external->export_learned_large_clause (clause);
-  } else if (external->learner)
-    external->export_learned_unit_clause (-uip);
+      bump_variables();
+  }
 
   // Update actual size statistics.
   //

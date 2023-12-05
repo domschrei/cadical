@@ -268,6 +268,8 @@ int Internal::cdcl_loop_with_inprocessing () {
       compact (); // collect variables
     else if (conditioning ())
       condition (); // globally blocked clauses
+    else if (importing ())
+      import_redundant_clauses (res);
     else
       res = decide (); // next decision
   }
@@ -283,6 +285,137 @@ int Internal::cdcl_loop_with_inprocessing () {
   STOP (search);
 
   return res;
+}
+
+bool Internal::importing () {
+  return level == 0 && external->learnSource != 0 
+      && watching() && external->learnSource->hasNextClause ();
+}
+
+void Internal::import_redundant_clauses (int& res) {
+  if (external->learnSource == 0) return;
+  if (res != 0) return;
+
+  // Import external clauses.
+  while (external->learnSource->hasNextClause ()) {
+
+    // Fetch pointer to 1st literal and size of the clause (plus glue)
+    auto cls = external->learnSource->getNextClause ();
+    const size_t size = cls.size ();
+    //printf("Import clause of size %lu\n", size);
+    assert (size > 0);
+    int unitLit = size == 1 ? cls[0] : 0;
+    assert (clause.empty ());
+    bool reducedSize = false;
+
+    if (unitLit == 0) {
+      // Learn non-unit clause
+
+      // Glue int at the front
+      int glue = cls[0];
+      assert (glue > 0);
+
+      // Analyze clause literals
+      bool addClause = true;
+      for (size_t i = 1; i < size; i++) {
+
+        int elit = cls[i];
+        assert (elit != 0);
+
+        if (external->marked (external->witness, elit)) {
+          // Literal marked as witness: Cannot import
+          internal->stats.clauseimport.r_wit++;
+          addClause = false; break;
+        }
+
+        int ilit = external->internalize(elit);
+
+        auto& f = flags (ilit);
+        if (f.eliminated () || f.substituted ()) {
+          // Literal has been eliminated: do not add this clause.
+          internal->stats.clauseimport.r_el++;
+          addClause = false; break;
+        } else if (f.fixed ()) {
+          // Literal is fixed
+          if (val (ilit) == 1) {
+            // TRUE: Clause can be omitted.
+            internal->stats.clauseimport.r_fx++;
+            addClause = false; break;
+          } // else: FALSE - literal can be omitted.
+          reducedSize = true;
+        } else {
+          // Can treat literal normally.
+          clause.push_back (ilit);
+          unitLit = elit;
+        }
+      }
+
+      if (!addClause) {
+        //printf("Discard clause\n");
+        internal->stats.clauseimport.discarded++;
+        clause.clear ();
+        continue;
+      }
+
+      // Handle clause of size >= 2 being learnt
+      // (unit clauses are handled below)
+      if (clause.size () >= 2) {
+        //printf("Learn non-unit clause\n");
+        external->check_learned_clause ();
+        Clause * res = new_clause (true, glue, reducedSize);
+        if (proof) proof->add_derived_clause (res, lrat_chain);
+        assert (watching ());
+        watch_clause (res);
+        unitLit = 0;
+        internal->stats.clauseimport.imported++;
+      } else if (clause.size() == 1) {
+        unitLit = internal->externalize (clause[0]);
+      } else {
+        if (reducedSize) internal->stats.clauseimport.r_fx++;
+        internal->stats.clauseimport.discarded++;
+      }
+
+      clause.clear ();
+    }
+
+    // Try to learn unit clause
+    if (unitLit != 0) {
+      if (external->marked (external->witness, unitLit)) {
+        // Do not learn unit clause if marked as witness
+        internal->stats.clauseimport.r_wit++;
+        internal->stats.clauseimport.discarded++;
+        continue;
+      }
+      int ilit = external->internalize (unitLit);
+      auto& f = flags(ilit);
+      if (f.eliminated () || f.substituted ()) {
+        // Do not import eliminated or substituted literal
+        internal->stats.clauseimport.r_el++;
+        internal->stats.clauseimport.discarded++;
+        continue;
+      }
+      // Do not import units which are already fixed
+      if (f.status == Flags::FIXED) {
+        internal->stats.clauseimport.r_fx++;
+        internal->stats.clauseimport.discarded++;
+        continue;
+      }
+      // Actually add the unit clause
+      assign_original_unit (++clause_id, ilit);
+      internal->stats.clauseimport.imported++;
+      if (reducedSize) external->export_learned_unit_clause (ilit);
+    }
+
+    // Stop importing if SAT or UNSAT was found
+    if (unsat) {
+      res = 20;
+      return;
+    }
+    if (satisfied ()) {
+      res = 10;
+      return;
+    }
+  }
 }
 
 /*------------------------------------------------------------------------*/

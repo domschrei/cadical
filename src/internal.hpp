@@ -568,7 +568,7 @@ struct Internal {
   // Managing clauses in 'clause.cpp'.  Without explicit 'Clause' argument
   // these functions work on the global temporary 'clause'.
   //
-  Clause *new_clause (bool red, int glue = 0);
+  Clause * new_clause (bool red, int glue = 0, bool doExport = true);
   void promote_clause (Clause *, int new_glue);
   size_t shrink_clause (Clause *, int new_size);
   void minimize_sort_clause ();
@@ -1119,8 +1119,17 @@ struct Internal {
 
   void reset_limits (); // Reset after 'solve' call.
 
-  // Try flipping a literal while not falsifying a model.
+  // Import learnt clauses from an external source.
+  bool importing ();
+  void import_redundant_clauses (int& res);
 
+  // Forcing decision variables to a certain phase.
+  //
+  void phase(int lit);
+  void unphase(int lit);
+
+  // Try flipping a literal while not falsifying a model.
+  //
   bool flip (int lit);
   bool flippable (int lit);
 
@@ -1147,11 +1156,6 @@ struct Internal {
   bool
   failed_constraint ();     // Was constraint used to proof unsatisfiablity?
   void reset_constraint (); // Reset after 'solve' call.
-
-  // Forcing decision variables to a certain phase.
-  //
-  void phase (int lit);
-  void unphase (int lit);
 
   // Globally blocked clause elimination.
   //

@@ -262,6 +262,12 @@ struct Stats {
   int64_t active;   // number of active variables
   int64_t inactive; // number of inactive variables
 
+  struct {
+    unsigned long imported;
+    unsigned long discarded;
+    unsigned long r_wit,r_el,r_fx;
+  } clauseimport;
+
   Stats ();
 
   void print (Internal *);
