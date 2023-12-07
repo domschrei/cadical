@@ -517,7 +517,7 @@ void Internal::add_new_original_clause (uint64_t id) {
       assert (glue <= (int) clause.size ());
       Clause *c = new_clause (false, glue);
       c->id = new_id;
-      clause_id--;
+      backtrack_last_lrat_id ();
       watch_clause (c);
       clause.clear ();
       original.clear ();

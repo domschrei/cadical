@@ -1122,6 +1122,9 @@ struct Internal {
   // Import learnt clauses from an external source.
   bool importing ();
   void import_redundant_clauses (int& res);
+  void handle_incoming_clause (uint64_t id, int glue, std::vector<int>& cls);
+  void try_import_unit (uint64_t id, int elit, bool simplified);
+  void add_clause_to_proof (uint64_t id);
 
   // Forcing decision variables to a certain phase.
   //
@@ -1462,15 +1465,27 @@ struct Internal {
   //
   void warning (const char *, ...) CADICAL_ATTRIBUTE_FORMAT (2, 3);
 
+  uint64_t prev_clause_id {0};
+
   uint64_t next_lrat_id () {
+    prev_clause_id = clause_id;
     if (opts.lratsolvercount <= 1) {
       ++clause_id;
     } else {
-      auto current_remainder = clause_id % opts.lratsolvercount;
-      clause_id += opts.lratsolverid - current_remainder;
+      if (clause_id == (uint64_t) opts.lratorigclscount) {
+        // Switch from original to redundant (derived) clauses.
+        // Align clause ID at the correct remainder mod #solvers
+        auto current_remainder = (clause_id - opts.lratorigclscount) % opts.lratsolvercount;
+        clause_id += opts.lratsolverid - current_remainder;
+        if (clause_id > (uint64_t) opts.lratorigclscount) clause_id -= opts.lratsolvercount;
+      }
+      // Go to next clause ID
       clause_id += opts.lratsolvercount;
     }
     return clause_id;
+  }
+  void backtrack_last_lrat_id () {
+    clause_id = prev_clause_id;
   }
 };
 
