@@ -87,7 +87,7 @@ void CaDiCaL::Internal::learn_imported_unit_clause (uint64_t id, int lit) {
 void CaDiCaL::Internal::try_import_unit (uint64_t id, int elit, bool simplified) {
 
   assert (clause.empty ());
-  assert (!simplified == lrat_chain.empty ());
+  assert (!lrat || !simplified == lrat_chain.empty ());
 
   // Do not learn unit clause if marked as witness
   if (external->marked (external->witness, elit)) {
@@ -136,8 +136,10 @@ void CaDiCaL::Internal::handle_incoming_clause (uint64_t id, int glue, std::vect
   const size_t size = cls.size ();
   assert (size > 0);
   assert (clause.empty ());
-  assert (lrat_chain.empty ());
-  assert (!is_locally_produced_lrat_id (id));
+  if (lrat) {
+    assert (lrat_chain.empty ());
+    assert (!is_locally_produced_lrat_id (id));
+  }
 
   // Unit clause?
   if (size == 1) {
@@ -241,7 +243,7 @@ void CaDiCaL::Internal::handle_incoming_clause (uint64_t id, int glue, std::vect
     add_clause_to_proof (impclsid);
     lrat_chain.clear ();
   }
-  Clause * res = new_clause (true, glue, false, impclsid);
+  Clause * res = new_clause (true, glue, reducedSize, impclsid);
   clause.clear ();
   assert (watching ());
   watch_clause (res);
