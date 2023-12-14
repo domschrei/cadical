@@ -109,6 +109,7 @@ OPTION( instantiateonce,   1,  0,  1,0,0,1, "instantiate each clause once") \
 LOGOPT( log,               0,  0,  1,0,0,0, "enable logging") \
 LOGOPT( logsort,           0,  0,  1,0,0,0, "sort logged clauses") \
 OPTION( lrat,              0,  0,  1,0,0,1, "use lrat proof format") \
+OPTION( lratdebug,         0,  0,  1,0,0,1, "output debugging files for simplified external clauses") \
 OPTION( lratdeletelines,   1,  0,  1,0,0,1, "output LRAT deletion lines") \
 OPTION( lratorigclscount,  0,  0,2e9,0,0,1, "number of original clauses in the problem") \
 OPTION( lratsolvercount,   1,  0,2e9,0,0,1, "number of solvers in the computation") \

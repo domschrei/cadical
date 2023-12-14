@@ -1,20 +1,93 @@
 
 #include "internal.hpp"
+#include <string>
 
 // Write a LRAT derivation straight to the tracers
 // without the detour over "Proof::add_derived_*_clause".
 void CaDiCaL::Internal::add_clause_to_proof (uint64_t id) {
+  assert (is_locally_produced_lrat_id (id));
+
+  // externalize literals
   std::vector<int> elits;
   for (int ilit : clause) elits.push_back(externalize (ilit));
-  for (auto &tracer : tracers) {
-    tracer->add_derived_clause (id, true, elits, lrat_chain);
+
+  // debug logging
+  if (opts.lratdebug) {
+    if (!dbg_ofs_import_simplifications.is_open ()) {
+      dbg_ofs_import_simplifications = std::ofstream(".importsimpl." + std::to_string(opts.lratsolverid) + "." + std::to_string(gettid()));
+    }
+    std::string clause_str;
+    for (int elit : elits) clause_str += std::to_string(elit) + " ";
+    std::string chain_str;
+    for (auto chain_id : lrat_chain) chain_str += std::to_string(chain_id) + " ";
+    dbg_ofs_import_simplifications << id << " : " << clause_str << " - " << chain_str << std::endl;
+    dbg_ofs_import_simplifications.flush();
   }
+
+  // add to proofs / tracers
+  for (auto &tracer : proof->get_tracers ()) {
+    tracer->add_derived_clause (id, /*redundant=*/true, elits, lrat_chain);
+  }
+}
+
+// Adjusted and simplified version of Internal::search_assign (analyze.cpp).
+// We do not add anything to the proof and we do not re-export the unit
+// (both is done in try_import_unit, but only if a simplification was done).
+void CaDiCaL::Internal::learn_imported_unit_clause (uint64_t id, int lit) {
+
+  const int idx = vidx (lit);
+  assert (!val (idx));
+  Var &v = var (idx);
+  const int lit_level = 0; // unit
+
+  v.level = lit_level;
+  v.trail = trail_size (lit_level);
+  v.reason = 0;
+  assert ((int) num_assigned < max_var);
+  assert (opts.reimply || num_assigned == trail.size ());
+  num_assigned++;
+
+  assert (!unsat);
+  const unsigned uidx = vlit (lit);
+  unit_clauses[uidx] = id;
+  register_lrat_id_of_unit_ilit (id, lit);
+  mark_fixed (lit);
+
+  const signed char tmp = sign (lit);
+  set_val (idx, tmp);
+  assert (val (lit) > 0);  // Just a bit paranoid but useful.
+  assert (val (-lit) < 0); // Ditto.
+  if (!searching_lucky_phases)
+    phases.saved[idx] = tmp; // phase saving during search
+  trail.push_back (lit);
+  if (external_prop && !external_prop_is_lazy && opts.reimply) {
+    notify_trail.push_back (lit);
+  }
+#ifdef LOGGING
+  if (!lit_level)
+    LOG ("root-level unit assign %d @ 0", lit);
+  else
+    LOG (reason, "search assign %d @ %d", lit, lit_level);
+#endif
+
+  if (watching ()) {
+    const Watches &ws = watches (-lit);
+    if (!ws.empty ()) {
+      const Watch &w = ws[0];
+      __builtin_prefetch (&w, 0, 1);
+    }
+  }
+
+  internal->stats.clauseimport.imported++;
 }
 
 // Attempt to import an incoming unit clause, possibly arising from
 // a simplification of an incoming non-unit clause (bool simplified).
 // In that case, lrat_chain may contain IDs of this simplification.
 void CaDiCaL::Internal::try_import_unit (uint64_t id, int elit, bool simplified) {
+
+  assert (clause.empty ());
+  assert (!simplified == lrat_chain.empty ());
 
   // Do not learn unit clause if marked as witness
   if (external->marked (external->witness, elit)) {
@@ -33,7 +106,7 @@ void CaDiCaL::Internal::try_import_unit (uint64_t id, int elit, bool simplified)
     return;
   }
   // Do not import units which are already fixed
-  if (f.fixed ()) {
+  if (f.fixed () || f.pure ()) {
     internal->stats.clauseimport.r_fx++;
     internal->stats.clauseimport.discarded++;
     if (simplified && lrat) lrat_chain.clear ();
@@ -49,25 +122,27 @@ void CaDiCaL::Internal::try_import_unit (uint64_t id, int elit, bool simplified)
       clause.resize (1, ilit);
       add_clause_to_proof (impclsid);
       lrat_chain.clear ();
+      clause.clear ();
     }
     // Re-export the clause in its simplified form
     external->export_learned_unit_clause (impclsid, ilit);
-  }
-  assign_original_unit (impclsid, ilit);
-  internal->stats.clauseimport.imported++;
+  } // otherwise: derivation is at another solver!
+  learn_imported_unit_clause (impclsid, ilit);
 }
 
-// Attempt to import a single clause.
+// Attempt to import a single clause with external literals.
 void CaDiCaL::Internal::handle_incoming_clause (uint64_t id, int glue, std::vector<int>& cls) {
 
   const size_t size = cls.size ();
   assert (size > 0);
   assert (clause.empty ());
   assert (lrat_chain.empty ());
+  assert (!is_locally_produced_lrat_id (id));
 
   // Unit clause?
   if (size == 1) {
     try_import_unit (id, cls[0], false);
+    clause.clear ();
     return;
   }
 
@@ -96,6 +171,10 @@ void CaDiCaL::Internal::handle_incoming_clause (uint64_t id, int glue, std::vect
       internal->stats.clauseimport.r_el++;
       addClause = false; break;
     }
+    if (f.pure ()) {
+      assert (val (ilit) != 0);
+      addClause = false; break;
+    }
     if (f.fixed ()) {
       // Literal is fixed
       if (val (ilit) == 1) {
@@ -106,10 +185,13 @@ void CaDiCaL::Internal::handle_incoming_clause (uint64_t id, int glue, std::vect
       assert (val (ilit) == -1);
       reducedSize = true;
       if (lrat) {
-        // Add the unit clause which shortens this clause to the LRAT chain.
-        auto unitidx = vlit (-ilit);
-        assert (unitidx < unit_clauses.size ());
-        uint64_t uid = unit_clauses[unitidx];
+        // Add the unit clause causing the shortening to the LRAT chain.
+        // We look up the *external* literal so that compacting does not
+        // destroy the mapping.
+        auto& unit_ids = external->ext_units;
+        unsigned eidx = (-elit > 0) + 2u * (unsigned) abs (-elit);
+        assert (eidx < unit_ids.size ());
+        uint64_t uid = unit_ids[eidx];
         assert (uid);
         lrat_chain.push_back (uid);
       }
@@ -148,17 +230,18 @@ void CaDiCaL::Internal::handle_incoming_clause (uint64_t id, int glue, std::vect
     int elit = internal->externalize (clause[0]);
     clause.clear ();
     try_import_unit (id, elit, true);
+    clause.clear ();
     return;
   }
   // Handle clause of size >= 2 being learnt
   uint64_t impclsid = reducedSize ? next_lrat_id () : id;
-  Clause * res = new_clause (true, glue, false, impclsid);
   if (reducedSize && lrat) {
     assert (!lrat_chain.empty ());
     lrat_chain.push_back (id); // add ID of the "original" incoming clause!
     add_clause_to_proof (impclsid);
     lrat_chain.clear ();
   }
+  Clause * res = new_clause (true, glue, false, impclsid);
   clause.clear ();
   assert (watching ());
   watch_clause (res);

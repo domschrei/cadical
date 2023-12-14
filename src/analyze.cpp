@@ -34,6 +34,7 @@ void Internal::learn_unit_clause (int lit) {
   int64_t id = next_lrat_id ();
   const unsigned uidx = vlit (lit);
   unit_clauses[uidx] = id;
+  register_lrat_id_of_unit_ilit (id, lit);
   if (proof) {
     proof->add_derived_unit_clause (id, lit, lrat_chain);
   }

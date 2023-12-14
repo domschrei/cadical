@@ -340,6 +340,7 @@ void Internal::assign_original_unit (uint64_t id, int lit) {
   }
   const unsigned uidx = vlit (lit);
   unit_clauses[uidx] = id;
+  register_lrat_id_of_unit_ilit (id, lit);
   LOG ("original unit assign %d", lit);
   assert (num_assigned == trail.size () || level);
   mark_fixed (lit);
@@ -368,6 +369,7 @@ void Internal::elevate_original_unit (uint64_t id, int lit) {
   trail.push_back (lit);
   const unsigned uidx = vlit (lit);
   unit_clauses[uidx] = id;
+  register_lrat_id_of_unit_ilit (id, lit);
   LOG ("original unit elevation %d", lit);
   mark_fixed (lit);
   /*
@@ -491,6 +493,7 @@ void Internal::add_new_original_clause (uint64_t id) {
         v.trail = 0;
         const unsigned uidx = vlit (clause[0]);
         unit_clauses[uidx] = new_id;
+        register_lrat_id_of_unit_ilit (new_id, clause[0]);
         mark_fixed (clause[0]);
         multitrail_dirty = 0;
       } else {

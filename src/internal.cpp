@@ -846,7 +846,8 @@ void Internal::finalize (int res) {
       const unsigned eidx = (elit < 0) + 2u * (unsigned) abs (elit);
       const uint64_t id = external->ext_units[eidx];
       if (id) {
-        assert (unit_clauses[vlit (lit)] == id);
+        // XXX assertion broken since we manipulate unit_clauses and ext_units
+        //assert (unit_clauses[vlit (lit)] == id);
         continue;
       }
     }

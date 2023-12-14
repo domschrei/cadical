@@ -78,28 +78,39 @@ inline void LratTracer::put_binary_id (int64_t id) {
 
 void LratTracer::lrat_add_clause (uint64_t id, const vector<int> &clause,
                                   const vector<uint64_t> &chain) {
+
+  // sanity check
+  if (id <= latest_id) {
+    printf("ERROR - added import ID %lu out of order (prev: %lu)!\n", id, latest_id);
+    abort();
+  }
+
   if (delete_ids.size ()) {
-    if (internal->opts.lratdeletelines) {
-      if (!binary)
-        file->put (latest_id), file->put (" ");
+    if (!binary)
+      file->put (latest_id), file->put (" ");
+    if (binary)
+      file->put ('d');
+    else
+      file->put ("d ");
+    for (auto &did : delete_ids) {
       if (binary)
-        file->put ('d');
+        put_binary_id (did);
       else
-        file->put ("d ");
-      for (auto &did : delete_ids) {
-        if (binary)
-          put_binary_id (did);
-        else
-          file->put (did), file->put (" ");
-      }
-      if (binary)
-        put_binary_zero ();
-      else
-        file->put ("0\n");
+        file->put (did), file->put (" ");
     }
+    if (binary)
+      put_binary_zero ();
+    else
+      file->put ("0\n");
     delete_ids.clear ();
   }
   latest_id = id;
+
+  if (clause.size () == 1) {
+    // Remember the ID of this unit clause as an *external* literal
+    // so that internal variable domain compacting does not destroy the mapping.
+    internal->register_lrat_id_of_unit_elit (id, clause[0]);
+  }
 
   if (binary)
     file->put ('a'), put_binary_id (id);
@@ -126,6 +137,7 @@ void LratTracer::lrat_add_clause (uint64_t id, const vector<int> &clause,
 }
 
 void LratTracer::lrat_delete_clause (uint64_t id) {
+  if (!internal->opts.lratdeletelines) return;
   delete_ids.push_back (id); // pushing off deletion for later
 }
 

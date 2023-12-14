@@ -19,6 +19,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 
 // Less common 'C' header.
 
@@ -1125,6 +1126,7 @@ struct Internal {
   void handle_incoming_clause (uint64_t id, int glue, std::vector<int>& cls);
   void try_import_unit (uint64_t id, int elit, bool simplified);
   void add_clause_to_proof (uint64_t id);
+  uint64_t last_added_import_id {0};
 
   // Forcing decision variables to a certain phase.
   //
@@ -1466,6 +1468,7 @@ struct Internal {
   void warning (const char *, ...) CADICAL_ATTRIBUTE_FORMAT (2, 3);
 
   uint64_t prev_clause_id {0};
+  std::ofstream dbg_ofs_import_simplifications;
 
   uint64_t next_lrat_id () {
     prev_clause_id = clause_id;
@@ -1484,9 +1487,25 @@ struct Internal {
     }
     return clause_id;
   }
+  bool is_locally_produced_lrat_id (uint64_t id) {
+    return (id - opts.lratorigclscount) % opts.lratsolvercount == (uint64_t) opts.lratsolverid;
+  }
   void backtrack_last_lrat_id () {
     clause_id = prev_clause_id;
   }
+
+  void register_lrat_id_of_unit_elit (uint64_t id, int elit) {
+    auto& unit_ids = external->ext_units;
+    unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
+    assert (eidx < unit_ids.size ());
+    unit_ids[eidx] = id;
+  }
+  void register_lrat_id_of_unit_ilit (uint64_t id, int ilit) {
+    int elit = externalize (ilit);
+    register_lrat_id_of_unit_elit (id, elit);
+  }
+
+  void learn_imported_unit_clause (uint64_t id, int lit);
 };
 
 // Fatal internal error which leads to abort.

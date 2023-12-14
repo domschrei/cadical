@@ -50,6 +50,8 @@ public:
   Proof (Internal *);
   ~Proof ();
 
+  vector<Tracer *>& get_tracers () {return tracers;}
+
   void connect (LratBuilder *lb) { lratbuilder = lb; }
   void connect (Tracer *t) { tracers.push_back (t); }
   void disconnect (Tracer *t);
