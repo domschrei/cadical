@@ -20,7 +20,7 @@ class LratTracer : public FileTracer {
   void put_binary_id (int64_t id);
 
   // support LRAT
-  void lrat_add_clause (uint64_t, const vector<int> &,
+  void lrat_add_clause (const uint64_t, bool, const vector<int> &,
                         const vector<uint64_t> &);
   void lrat_delete_clause (uint64_t);
 

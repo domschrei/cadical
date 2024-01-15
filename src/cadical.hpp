@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <vector>
+#include "onthefly_checking.hpp"
 
 namespace CaDiCaL {
 
@@ -739,6 +740,8 @@ public:
   //
   bool trace_proof (FILE *file, const char *name); // Write DRAT proof.
   bool trace_proof (const char *path);             // Open & write proof.
+  // Forward LRAT proof information to custom callbacks which handle the checking.
+  void trace_proof_internally (LratCallbackProduceClause cbProduce, LratCallbackImportClause cbImport, LratCallbackDeleteClauses cbDelete);
 
   // Flushing the proof trace file eventually calls 'fflush' on the actual
   // file or pipe and thus if this function returns all the proof steps
@@ -1100,14 +1103,14 @@ public:
   virtual ~Learner () {}
   virtual bool learning (int size) = 0;
   virtual void append_literal (int lit) = 0;
-  virtual void publish_clause (uint64_t id, int glue) = 0;
+  virtual void publish_clause (uint64_t id, int glue, const uint8_t* signatureData, int signatureSize) = 0;
 };
 
 class LearnSource {
 public:
   virtual ~LearnSource () { }
   virtual bool hasNextClause () = 0;
-  virtual const std::vector<int>& getNextClause (uint64_t& id, int& glue) = 0;
+  virtual const std::vector<int>& getNextClause (uint64_t& id, int& glue, std::vector<uint8_t>*& signature) = 0;
 };
 
 /*------------------------------------------------------------------------*/

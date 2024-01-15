@@ -268,6 +268,12 @@ struct Stats {
     unsigned long r_wit,r_el,r_fx;
   } clauseimport;
 
+
+  unsigned long produced_cls {0};
+  unsigned long signed_produced_cls {0};
+  unsigned long incoming_cls {0};
+  unsigned long validated_incoming_cls {0};
+
   Stats ();
 
   void print (Internal *);

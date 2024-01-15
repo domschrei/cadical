@@ -4,6 +4,8 @@
 /*------------------------------------------------------------------------*/
 
 #include "range.hpp"
+#include <cstdint>
+#include <vector>
 
 /*------------------------------------------------------------------------*/
 
@@ -94,8 +96,10 @@ struct External {
   LearnSource *learnSource;
 
   void export_learned_empty_clause ();
-  void export_learned_unit_clause (uint64_t id, int ilit);
-  void export_learned_large_clause (uint64_t id, const vector<int> &, int glue);
+  void export_learned_external_unit_clause (uint64_t id, int elit, const uint8_t* sigData, int sigSize);
+  void export_learned_external_large_clause (uint64_t id, const vector<int> &, int glue, const uint8_t* sigData, int sigSize);
+  void export_learned_internal_unit_clause (uint64_t id, int ilit);
+  void export_learned_internal_large_clause (uint64_t id, const vector<int> &, int glue);
 
   // If there is an external propagator.
 

@@ -38,7 +38,8 @@ void Internal::learn_unit_clause (int lit) {
   if (proof) {
     proof->add_derived_unit_clause (id, lit, lrat_chain);
   }
-  external->export_learned_unit_clause (id, lit);
+  if (!opts.signsharedcls)
+    external->export_learned_internal_unit_clause (id, lit);
   mark_fixed (lit);
 }
 
@@ -984,7 +985,7 @@ void Internal::analyze () {
   //
   if (!level) {
     learn_empty_clause ();
-    if (external->learner)
+    if (!opts.signsharedcls)
       external->export_learned_empty_clause ();
     // lrat_chain.clear (); done in learn_empty_clause
     STOP (analyze);

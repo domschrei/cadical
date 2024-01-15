@@ -1,4 +1,6 @@
 #include "internal.hpp"
+#include "internallrattracer.hpp"
+#include "onthefly_checking.hpp"
 
 /*------------------------------------------------------------------------*/
 
@@ -1023,7 +1025,7 @@ bool Solver::trace_proof (FILE *external_file, const char *name) {
   File *internal_file = File::write (internal, external_file, name);
   assert (internal_file);
   internal->trace (internal_file);
-  if (internal->opts.lrat && internal->opts.lratsolvercount > 1) {
+  if (internal->opts.lrat) {
     internal->reserve_ids (internal->opts.lratorigclscount);
   }
   LOG_API_CALL_RETURNS ("trace_proof", name, true);
@@ -1040,11 +1042,25 @@ bool Solver::trace_proof (const char *path) {
   File *internal_file = File::write (internal, path);
   bool res = (internal_file != 0);
   internal->trace (internal_file);
-  if (internal->opts.lrat && internal->opts.lratsolvercount > 1) {
+  if (internal->opts.lrat) {
     internal->reserve_ids (internal->opts.lratorigclscount);
   }
   LOG_API_CALL_RETURNS ("trace_proof", path, res);
   return res;
+}
+
+void Solver::trace_proof_internally(
+  LratCallbackProduceClause cbProduce, LratCallbackImportClause cbImport, LratCallbackDeleteClauses cbDelete
+) {
+  REQUIRE_VALID_STATE ();
+  REQUIRE (
+      state () == CONFIGURING,
+      "can only start proof tracing right after initialization");
+  FileTracer *ft = new InternalLratTracer (internal, cbProduce, cbImport, cbDelete);
+  connect_proof_tracer (ft, true);
+  if (internal->opts.lrat) {
+    internal->reserve_ids (internal->opts.lratorigclscount);
+  }
 }
 
 void Solver::flush_proof_trace (bool print_statistics_unless_quiet) {

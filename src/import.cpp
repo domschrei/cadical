@@ -1,6 +1,9 @@
 
 #include "internal.hpp"
+#include <cstdint>
+#include <sstream>
 #include <string>
+#include <iomanip>
 
 // Write a LRAT derivation straight to the tracers
 // without the detour over "Proof::add_derived_*_clause".
@@ -84,7 +87,7 @@ void CaDiCaL::Internal::learn_imported_unit_clause (uint64_t id, int lit) {
 // Attempt to import an incoming unit clause, possibly arising from
 // a simplification of an incoming non-unit clause (bool simplified).
 // In that case, lrat_chain may contain IDs of this simplification.
-void CaDiCaL::Internal::try_import_unit (uint64_t id, int elit, bool simplified) {
+void CaDiCaL::Internal::try_import_unit (uint64_t id, int elit, bool simplified, const std::vector<uint8_t>& sig) {
 
   assert (clause.empty ());
   assert (!lrat || !simplified == lrat_chain.empty ());
@@ -125,25 +128,43 @@ void CaDiCaL::Internal::try_import_unit (uint64_t id, int elit, bool simplified)
       clause.clear ();
     }
     // Re-export the clause in its simplified form
-    external->export_learned_unit_clause (impclsid, ilit);
-  } // otherwise: derivation is at another solver!
+    if (!opts.signsharedcls)
+      external->export_learned_internal_unit_clause (impclsid, ilit);
+  } else if (opts.signsharedcls) {
+    // Clause was not simplified but originally a unit: add to proof
+    std::vector<int> cls(1, elit);
+    validate_clause_and_add_as_axiom(id, cls, sig);
+  }
   learn_imported_unit_clause (impclsid, ilit);
 }
 
+void CaDiCaL::Internal::validate_clause_and_add_as_axiom (uint64_t id, std::vector<int>& cls, const std::vector<uint8_t>& sig) {
+
+  // Validate the clause's signature
+  if (!opts.signsharedcls) return;
+  // Forward the clause to the checker/proof **as an axiom** (i.e., "original" clause)
+  // and to validate the signature.
+  for (auto tracer : proof->get_tracers ()) {
+    tracer->add_original_clause_with_signature (id, cls, sig);
+  }
+  stats.validated_incoming_cls++;
+}
+
 // Attempt to import a single clause with external literals.
-void CaDiCaL::Internal::handle_incoming_clause (uint64_t id, int glue, std::vector<int>& cls) {
+void CaDiCaL::Internal::handle_incoming_clause (uint64_t id, int glue, std::vector<int>& cls, const std::vector<uint8_t>& sig) {
 
   const size_t size = cls.size ();
   assert (size > 0);
   assert (clause.empty ());
   if (lrat) {
     assert (lrat_chain.empty ());
-    assert (!is_locally_produced_lrat_id (id));
+    assert (opts.signsharedcls || !is_locally_produced_lrat_id (id));
+    if (is_locally_produced_lrat_id (id)) return; // no need to re-add your own clause
   }
 
   // Unit clause?
   if (size == 1) {
-    try_import_unit (id, cls[0], false);
+    try_import_unit (id, cls[0], false, sig);
     clause.clear ();
     return;
   }
@@ -211,6 +232,8 @@ void CaDiCaL::Internal::handle_incoming_clause (uint64_t id, int glue, std::vect
     return;
   }
 
+  validate_clause_and_add_as_axiom (id, cls, sig);
+
   // Clause can be imported. Which size?
   if (clause.empty ()) {
     // found empty clause -- UNSAT
@@ -231,7 +254,7 @@ void CaDiCaL::Internal::handle_incoming_clause (uint64_t id, int glue, std::vect
     assert (reducedSize);
     int elit = internal->externalize (clause[0]);
     clause.clear ();
-    try_import_unit (id, elit, true);
+    try_import_unit (id, elit, true, sig);
     clause.clear ();
     return;
   }
@@ -260,6 +283,8 @@ bool CaDiCaL::Internal::importing () {
 void CaDiCaL::Internal::import_redundant_clauses (int& res) {
   if (external->learnSource == 0) return;
   if (res != 0) return;
+  std::vector<uint8_t>* sig;
+  std::vector<uint8_t> emptySig;
 
   // Import external clauses.
   while (external->learnSource->hasNextClause ()) {
@@ -267,8 +292,9 @@ void CaDiCaL::Internal::import_redundant_clauses (int& res) {
     // Fetch pointer to 1st literal and size of the clause (plus ID, glue)
     uint64_t id;
     int glue;
-    auto cls = external->learnSource->getNextClause (id, glue);
-    handle_incoming_clause(id, glue, cls);
+    auto cls = external->learnSource->getNextClause (id, glue, sig);
+    handle_incoming_clause (id, glue, cls, sig ? *sig : emptySig);
+    stats.incoming_cls++;
 
     // Stop importing if SAT or UNSAT was found
     if (unsat || res == 20) {

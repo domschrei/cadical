@@ -1123,10 +1123,13 @@ struct Internal {
   // Import learnt clauses from an external source.
   bool importing ();
   void import_redundant_clauses (int& res);
-  void handle_incoming_clause (uint64_t id, int glue, std::vector<int>& cls);
-  void try_import_unit (uint64_t id, int elit, bool simplified);
+  void handle_incoming_clause (uint64_t id, int glue, std::vector<int>& cls, const std::vector<uint8_t>& sig);
+  void try_import_unit (uint64_t id, int elit, bool simplified, const std::vector<uint8_t>& sig);
   void add_clause_to_proof (uint64_t id);
+  void validate_clause_and_add_as_axiom (uint64_t id, std::vector<int>& cls, const std::vector<uint8_t>& sig);
   uint64_t last_added_import_id {0};
+  int last_glue {0};
+  bool add_next_derived_clause_as_axiom {false};
 
   // Forcing decision variables to a certain phase.
   //
@@ -1472,19 +1475,16 @@ struct Internal {
 
   uint64_t next_lrat_id () {
     prev_clause_id = clause_id;
-    if (opts.lratsolvercount <= 1) {
-      ++clause_id;
-    } else {
-      if (clause_id == (uint64_t) opts.lratorigclscount) {
-        // Switch from original to redundant (derived) clauses.
-        // Align clause ID at the correct remainder mod #solvers
-        auto current_remainder = (clause_id - opts.lratorigclscount) % opts.lratsolvercount;
-        clause_id += opts.lratsolverid - current_remainder;
-        if (clause_id > (uint64_t) opts.lratorigclscount) clause_id -= opts.lratsolvercount;
-      }
-      // Go to next clause ID
-      clause_id += opts.lratsolvercount;
+    assert (clause_id >= (uint64_t) opts.lratorigclscount);
+    if (clause_id == (uint64_t) opts.lratorigclscount) {
+      // Switch from original to redundant (derived) clauses.
+      // Align clause ID at the correct remainder mod #solvers
+      auto current_remainder = (clause_id - opts.lratorigclscount) % opts.lratsolvercount;
+      clause_id += opts.lratsolverid - current_remainder;
+      if (clause_id > (uint64_t) opts.lratorigclscount) clause_id -= opts.lratsolvercount;
     }
+    // Go to next clause ID
+    clause_id += opts.lratsolvercount;
     return clause_id;
   }
   bool is_locally_produced_lrat_id (uint64_t id) {

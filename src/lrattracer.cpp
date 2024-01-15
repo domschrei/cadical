@@ -76,8 +76,11 @@ inline void LratTracer::put_binary_id (int64_t id) {
 
 /*------------------------------------------------------------------------*/
 
-void LratTracer::lrat_add_clause (uint64_t id, const vector<int> &clause,
+void LratTracer::lrat_add_clause (const uint64_t id, bool redundant,
+                                  const vector<int> &clause,
                                   const vector<uint64_t> &chain) {
+
+  assert (!internal->opts.signsharedcls);
 
   // sanity check
   if (id <= latest_id) {
@@ -143,13 +146,13 @@ void LratTracer::lrat_delete_clause (uint64_t id) {
 
 /*------------------------------------------------------------------------*/
 
-void LratTracer::add_derived_clause (uint64_t id, bool,
+void LratTracer::add_derived_clause (uint64_t id, bool redundant,
                                      const vector<int> &clause,
                                      const vector<uint64_t> &chain) {
   if (file->closed ())
     return;
   LOG ("LRAT TRACER tracing addition of derived clause");
-  lrat_add_clause (id, clause, chain);
+  lrat_add_clause (id, redundant, clause, chain);
 #ifndef QUIET
   added++;
 #endif

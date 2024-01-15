@@ -124,7 +124,11 @@ Clause * Internal::new_clause (bool red, int glue, bool doExport, uint64_t id) {
     c->literals[i] = clause[i];
 
   // export redundant clause
-  if (red && doExport) external->export_learned_large_clause (c->id, clause, glue);
+  if (red) {
+    if (!opts.signsharedcls && doExport)
+      external->export_learned_internal_large_clause (c->id, clause, glue);
+    last_glue = glue;
+  }
 
   // Just checking that we did not mess up our sophisticated memory layout.
   // This might be compiler dependent though. Crucial for correctness.

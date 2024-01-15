@@ -823,37 +823,54 @@ void External::export_learned_empty_clause () {
   assert (learner);
   if (learner->learning (0)) {
     LOG ("exporting learned empty clause");
-    learner->publish_clause (0, 0);
+    learner->publish_clause (0, 0, 0, 0);
   } else
     LOG ("not exporting learned empty clause");
 }
 
-void External::export_learned_unit_clause (uint64_t id, int ilit) {
+void External::export_learned_internal_unit_clause (uint64_t id, int ilit) {
   if (!learner) return;
-  if (learner->learning (1)) {
-    LOG ("exporting learned unit clause");
-    const int elit = internal->externalize (ilit);
-    assert (elit);
-    learner->append_literal (elit);
-    learner->publish_clause (id, 1);
-  } else
-    LOG ("not exporting learned unit clause");
+  if (!learner->learning (1)) return;
+  LOG ("exporting learned unit clause");
+  const int elit = internal->externalize (ilit);
+  assert (elit);
+  learner->append_literal (elit);
+  learner->publish_clause (id, 1, 0, 0);
+}
+      
+void External::export_learned_external_unit_clause(uint64_t id, int elit, const uint8_t* sigData, int sigSize) {
+  if (!learner) return;
+  if (!learner->learning (1)) return;
+  learner->append_literal (elit);
+  learner->publish_clause (id, 1, sigData, sigSize);
 }
 
-void External::export_learned_large_clause (uint64_t id, const vector<int> & clause, int glue) {
+void External::export_learned_internal_large_clause (uint64_t id, const vector<int> & clause, int glue) {
   if (!learner) return;
   size_t size = clause.size ();
   assert (size <= (unsigned) INT_MAX);
-  if (learner->learning ((int) size)) {
-    LOG ("exporting learned clause of size %zu", size);
-    for (auto ilit : clause) {
-      const int elit = internal->externalize (ilit);
-      assert (elit);
-      learner->append_literal (elit);
-    }
-    learner->publish_clause (id, glue);
-  } else
-    LOG ("not exporting learned clause of size %zu", size);
+  assert (glue <= clause.size ());
+  if (!learner->learning ((int) size)) return;
+  LOG ("exporting learned clause of size %zu", size);
+  for (auto ilit : clause) {
+    const int elit = internal->externalize (ilit);
+    assert (elit);
+    learner->append_literal (elit);
+  }
+  learner->publish_clause (id, glue, 0, 0);
+}
+
+void External::export_learned_external_large_clause (uint64_t id, const vector<int> & clause, int glue, const uint8_t* sigData, int sigSize) {
+  if (!learner) return;
+  size_t size = clause.size ();
+  assert (size <= (unsigned) INT_MAX);
+  assert (glue <= clause.size ());
+  if (!learner->learning ((int) size)) return;
+  LOG ("exporting learned clause of size %zu", size);
+  for (auto elit : clause) {
+    learner->append_literal (elit);
+  }
+  learner->publish_clause (id, glue, sigData, sigSize);
 }
 
 } // namespace CaDiCaL

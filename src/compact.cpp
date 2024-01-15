@@ -260,7 +260,7 @@ void Internal::compact () {
     }
     unit_clauses[2 * src] = 0;
     unit_clauses[2 * src + 1] = 0;
-    assert (id);
+    assert (!opts.lrat || id);
   }
   unit_clauses.resize (2 * mapper.new_vsize);
   shrink_vector (unit_clauses);
