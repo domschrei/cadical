@@ -1,6 +1,5 @@
 
 #include "internal.hpp"
-#include "signature.hpp"
 #include "internallrattracer.hpp"
 
 #include <algorithm>
@@ -48,22 +47,22 @@ void InternalLratTracer::lrat_add_clause (const uint64_t id, bool redundant,
     internal->register_lrat_id_of_unit_elit (id, clause[0]);
   }
 
-  bool export_clause = internal->opts.signsharedcls && redundant
+  bool export_clause = internal->opts.signsharedcls
+    && (redundant || clause.size () == 1)
     && internal->external->learner
     && internal->external->learner->learning (clause.size ());
 
   auto clauseToExport = &clause;
-  uint8_t* sigData {nullptr};
-  int sigSize = 0;
+  int sigSize = 16;
+  uint8_t sigData[sigSize];
   if (export_clause) {
     auto sorted = new std::vector<int>(clause.data (), clause.data () + clause.size ());
     std::sort(sorted->begin(), sorted->end());
     clauseToExport = sorted;
-    sigSize = 32;
-    sigData = (uint8_t*) malloc(sigSize);
   }
 
-  bool ok = cb_produce (id, clauseToExport->data (), clauseToExport->size (), chain.data (), chain.size (), sigData, sigSize);
+  bool ok = cb_produce (id, clauseToExport->data (), clauseToExport->size (), chain.data (), chain.size (),
+    export_clause ? sigData : nullptr, sigSize);
   if (!ok) abort ();
   internal->stats.produced_cls++;
 
@@ -84,7 +83,6 @@ void InternalLratTracer::lrat_add_clause (const uint64_t id, bool redundant,
 
     internal->stats.signed_produced_cls++;
     delete clauseToExport;
-    free(sigData);
   }
 }
 
@@ -130,11 +128,11 @@ bool InternalLratTracer::closed () { return false; }
 #ifndef QUIET
 void InternalLratTracer::print_statistics () {}
 #endif
-void InternalLratTracer::close (bool print) {
+void InternalLratTracer::close (bool /*print*/) {
   printf("[CaDiCaL] produced=%lu produced_signed=%lu incoming=%lu incoming_validated=%lu\n",
     internal->stats.produced_cls, internal->stats.signed_produced_cls,
     internal->stats.incoming_cls, internal->stats.validated_incoming_cls);
 }
-void InternalLratTracer::flush (bool print) {}
+void InternalLratTracer::flush (bool /*print*/) {}
 
 } // namespace CaDiCaL
