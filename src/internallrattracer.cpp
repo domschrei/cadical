@@ -35,8 +35,16 @@ void InternalLratTracer::lrat_add_clause (const uint64_t id, bool redundant,
   }
 
   if (delete_ids.size ()) {
-    bool ok = cb_delete (delete_ids.data (), delete_ids.size ());
-    if (!ok) abort ();
+    // Delete IDs in chunks to keep individual LRAT statements somewhat manageable    
+    const size_t step = 1UL<<16;
+    size_t nbDeleted = 0;
+    for (size_t start = 0; start < delete_ids.size (); start += step) {
+      size_t end = std::min(start+step, delete_ids.size ());
+      bool ok = cb_delete (delete_ids.data () + start, end-start);
+      if (!ok) abort ();
+      nbDeleted += end-start;
+    }
+    if (nbDeleted != delete_ids.size ()) abort();
     delete_ids.clear ();
   }
   latest_id = id;
@@ -48,42 +56,20 @@ void InternalLratTracer::lrat_add_clause (const uint64_t id, bool redundant,
   }
 
   bool export_clause = internal->opts.signsharedcls
-    && (redundant || clause.size () == 1)
-    && internal->external->learner
-    && internal->external->learner->learning (clause.size ());
-
-  auto clauseToExport = &clause;
-  int sigSize = 16;
-  uint8_t sigData[sigSize];
+    && (redundant || clause.size () == 1);
+    //&& internal->external->learner
+    //&& internal->external->learner->learning (clause.size ());
+  int glue = 0;
   if (export_clause) {
-    auto sorted = new std::vector<int>(clause.data (), clause.data () + clause.size ());
-    std::sort(sorted->begin(), sorted->end());
-    clauseToExport = sorted;
+    glue = internal->last_glue;
+    if (!glue || glue > clause.size ()) glue = clause.size ();
   }
+  internal->last_glue = 0;
 
-  bool ok = cb_produce (id, clauseToExport->data (), clauseToExport->size (), chain.data (), chain.size (),
-    export_clause ? sigData : nullptr, sigSize);
+  uint8_t sigData[16];
+  bool ok = cb_produce (id, clause.data (), clause.size (), chain.data (), chain.size (), glue);
   if (!ok) abort ();
   internal->stats.produced_cls++;
-
-  // Export the clause whose derivation you just output.
-  if (export_clause) {
-
-    // Export clause with signature
-    if (clauseToExport->size () == 0)
-      internal->external->export_learned_empty_clause ();
-    else if (clauseToExport->size () == 1)
-      internal->external->export_learned_external_unit_clause (id, clauseToExport->at(0), sigData, sigSize);
-    else {
-      auto& glue = internal->last_glue;
-      if (!glue || glue > clauseToExport->size ()) glue = clauseToExport->size ();
-      internal->external->export_learned_external_large_clause (id, *clauseToExport, internal->last_glue, sigData, sigSize);
-      glue = 0;
-    }
-
-    internal->stats.signed_produced_cls++;
-    delete clauseToExport;
-  }
 }
 
 void InternalLratTracer::lrat_delete_clause (uint64_t id) {
@@ -129,9 +115,8 @@ bool InternalLratTracer::closed () { return false; }
 void InternalLratTracer::print_statistics () {}
 #endif
 void InternalLratTracer::close (bool /*print*/) {
-  printf("[CaDiCaL] produced=%lu produced_signed=%lu incoming=%lu incoming_validated=%lu\n",
-    internal->stats.produced_cls, internal->stats.signed_produced_cls,
-    internal->stats.incoming_cls, internal->stats.validated_incoming_cls);
+  printf("[CaDiCaL] produced=%lu incoming=%lu incoming_validated=%lu\n",
+    internal->stats.produced_cls, internal->stats.incoming_cls, internal->stats.validated_incoming_cls);
 }
 void InternalLratTracer::flush (bool /*print*/) {}
 

@@ -270,7 +270,6 @@ struct Stats {
 
 
   unsigned long produced_cls {0};
-  unsigned long signed_produced_cls {0};
   unsigned long incoming_cls {0};
   unsigned long validated_incoming_cls {0};
 

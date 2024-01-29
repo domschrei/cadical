@@ -13,11 +13,9 @@ Arguments:
     - int : number of literals
     - const unsigned long* : clause hints
     - int : number of clause hints
-    - uint8_t* : memory to which to write the signature, or nullptr if no signature is desired
-    - int& : in-out-parameter for the (in: maximum, out: actual) size of the signature
-        (abort() may be called if insufficient space is available for the signature)
+    - int : glue of the learnt clause, or 0 if it is irrelevant and the clause should NOT be exported
 */
-typedef std::function<bool(unsigned long, const int*, int, const unsigned long*, int, uint8_t*, int&)> LratCallbackProduceClause;
+typedef std::function<bool(unsigned long, const int*, int, const unsigned long*, int, int)> LratCallbackProduceClause;
 
 /*
 Add a clause as an axiom (i.e., as if it were an original clause of the problem)
