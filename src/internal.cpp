@@ -822,7 +822,7 @@ int Internal::lookahead () {
 /*------------------------------------------------------------------------*/
 
 void Internal::finalize (int res) {
-  if (!proof)
+  if (!proof || opts.lrat)
     return;
   LOG ("finalizing");
   // finalize external units
