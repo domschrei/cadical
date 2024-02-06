@@ -66,7 +66,6 @@ void InternalLratTracer::lrat_add_clause (const uint64_t id, bool redundant,
   }
   internal->last_glue = 0;
 
-  uint8_t sigData[16];
   bool ok = cb_produce (id, clause.data (), clause.size (), chain.data (), chain.size (), glue);
   if (!ok) abort ();
   internal->stats.produced_cls++;
