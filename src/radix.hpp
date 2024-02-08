@@ -37,7 +37,7 @@ struct pointer_rank {
   Type operator() (void *ptr) { return (size_t) ptr; }
 };
 
-template <class I, class Rank> void rsort (I first, I last, Rank rank, volatile bool* interrupt = nullptr) {
+template <class I, class Rank> void rsort (I first, I last, Rank rank) {
   typedef typename iterator_traits<I>::value_type T;
   typedef typename Rank::Type R;
 
@@ -74,8 +74,6 @@ template <class I, class Rank> void rsort (I first, I last, Rank rank, volatile 
 
   for (size_t i = 0; i < 8 * sizeof (rank (*first));
        i += l, shifted <<= l) {
-
-    if (interrupt && *interrupt) return;
 
     if (bounded && (lower & shifted) == (upper & shifted))
       continue;

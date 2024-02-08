@@ -776,6 +776,8 @@ public:
   //
   void close_proof_trace (bool print = false);
 
+  void close_proof_asynchronously ();
+
   // Enables clausal proof tracing with or without antecedents using
   // the Tracer interface defined in 'tracer.hpp'
   //

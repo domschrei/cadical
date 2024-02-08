@@ -500,8 +500,7 @@ void Internal::copy_non_garbage_clauses () {
     shrink_vector (clauses);
 
   if (opts.arenasort)
-    rsort (clauses.begin (), clauses.end (), pointer_rank (),
-      opts.lrat ? &termination_forced : nullptr);
+    rsort (clauses.begin (), clauses.end (), pointer_rank ());
 
   // Release 'from' space completely and then swap 'to' with 'from'.
   //

@@ -470,18 +470,14 @@ void Internal::compact () {
   assert (saved.empty ());
   if (!scores.empty ()) {
     while (!scores.empty ()) {
-      auto lim = std::min(scores.size (), 2048UL);
-      for (size_t i = 0; i < lim; i++) {
-        const int src = scores.front ();
-        scores.pop_front ();
-        const int dst = mapper.map_idx (src);
-        if (!dst)
-          continue;
-        if (src == mapper.first_fixed)
-          continue;
-        saved.push_back (dst);
-      }
-      if (opts.lrat && internal->termination_forced) return;
+      const int src = scores.front ();
+      scores.pop_front ();
+      const int dst = mapper.map_idx (src);
+      if (!dst)
+        continue;
+      if (src == mapper.first_fixed)
+        continue;
+      saved.push_back (dst);
     }
     scores.erase ();
   }

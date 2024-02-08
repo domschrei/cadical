@@ -4,6 +4,9 @@
 #include <sstream>
 #include <string>
 #include <iomanip>
+#include <unistd.h>
+#include <sys/syscall.h>
+#define gettid() syscall(SYS_gettid)
 
 // Write a LRAT derivation straight to the tracers
 // without the detour over "Proof::add_derived_*_clause".

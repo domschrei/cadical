@@ -1083,6 +1083,10 @@ void Solver::close_proof_trace (bool print_statistics_unless_quiet) {
   LOG_API_CALL_END ("close_proof_trace");
 }
 
+void Solver::close_proof_asynchronously () {
+  for (auto& tracer : internal->file_tracers) tracer->stop_asynchronously ();
+}
+
 /*------------------------------------------------------------------------*/
 
 void Solver::connect_proof_tracer (Tracer *tracer, bool antecedents) {

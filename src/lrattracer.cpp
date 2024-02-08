@@ -149,13 +149,17 @@ void LratTracer::lrat_delete_clause (uint64_t id) {
 void LratTracer::add_derived_clause (uint64_t id, bool redundant,
                                      const vector<int> &clause,
                                      const vector<uint64_t> &chain) {
-  if (file->closed ())
+  in_call = true;
+  if (stopped_asynchronously || file->closed ()) {
+    in_call = false;
     return;
+  }
   LOG ("LRAT TRACER tracing addition of derived clause");
   lrat_add_clause (id, redundant, clause, chain);
 #ifndef QUIET
   added++;
 #endif
+  in_call = false;
 }
 
 void LratTracer::delete_clause (uint64_t id, bool, const vector<int> &) {
@@ -218,6 +222,16 @@ void LratTracer::flush (bool print) {
 #else
   (void) print;
 #endif
+}
+
+void LratTracer::stop_asynchronously() {
+  stopped_asynchronously = true;
+  while (in_call) {}
+  if (closed ()) {
+    return;
+  }
+  flush(false);
+  close(false);
 }
 
 } // namespace CaDiCaL

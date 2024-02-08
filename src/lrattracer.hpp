@@ -15,6 +15,10 @@ class LratTracer : public FileTracer {
   uint64_t latest_id;
   vector<uint64_t> delete_ids;
 
+  volatile bool stopped_asynchronously {false};
+  volatile bool in_call {false};
+
+
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
   void put_binary_id (int64_t id);
@@ -31,6 +35,8 @@ public:
 
   void connect_internal (Internal *i) override;
   void begin_proof (uint64_t) override;
+
+  void stop_asynchronously () override;
 
   void add_original_clause (uint64_t, bool, const vector<int> &,
                             bool = false) override {} // skip

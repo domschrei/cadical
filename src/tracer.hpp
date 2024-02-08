@@ -16,6 +16,8 @@ public:
   Tracer () {}
   virtual ~Tracer () {}
 
+  virtual void stop_asynchronously () {}
+
   /*------------------------------------------------------------------------*/
   /*                                                                        */
   /*                            Basic Events */
