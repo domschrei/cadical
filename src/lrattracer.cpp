@@ -149,17 +149,13 @@ void LratTracer::lrat_delete_clause (uint64_t id) {
 void LratTracer::add_derived_clause (uint64_t id, bool redundant,
                                      const vector<int> &clause,
                                      const vector<uint64_t> &chain) {
-  in_call = true;
-  if (stopped_asynchronously || file->closed ()) {
-    in_call = false;
-    return;
-  }
+  if (!mtx_write.try_lock ()) return;
   LOG ("LRAT TRACER tracing addition of derived clause");
   lrat_add_clause (id, redundant, clause, chain);
 #ifndef QUIET
   added++;
 #endif
-  in_call = false;
+  mtx_write.unlock ();
 }
 
 void LratTracer::delete_clause (uint64_t id, bool, const vector<int> &) {
@@ -225,8 +221,7 @@ void LratTracer::flush (bool print) {
 }
 
 void LratTracer::stop_asynchronously() {
-  stopped_asynchronously = true;
-  while (in_call) {}
+  mtx_write.lock (); // never gets unlocked!
   if (closed ()) {
     return;
   }

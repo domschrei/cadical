@@ -1,6 +1,8 @@
 #ifndef _lrattracer_h_INCLUDED
 #define _lrattracer_h_INCLUDED
 
+#include <mutex>
+
 namespace CaDiCaL {
 
 class LratTracer : public FileTracer {
@@ -15,9 +17,7 @@ class LratTracer : public FileTracer {
   uint64_t latest_id;
   vector<uint64_t> delete_ids;
 
-  volatile bool stopped_asynchronously {false};
-  volatile bool in_call {false};
-
+  std::mutex mtx_write;
 
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
