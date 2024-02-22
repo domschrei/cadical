@@ -1029,6 +1029,7 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
 // the function with (0, c). originally we justified each literal in c on
 // its own but this is not actually necessary.
 //
+/*
 void Internal::vivify_build_lrat (int lit, Clause *reason) {
   LOG (reason, "VIVIFY LRAT justifying %d with reason", lit);
 
@@ -1054,6 +1055,57 @@ void Internal::vivify_build_lrat (int lit, Clause *reason) {
     }
   }
   lrat_chain.push_back (reason->id);
+}
+*/
+void Internal::vivify_build_lrat (int l, Clause* r) {
+  LOG (reason, "VIVIFY LRAT justifying %d with reason", lit);
+
+  // We emulate an iterative procedure with a stack of virtual method calls
+  // to the above commented-out method.
+  struct StackElem {const int lit; const Clause* reason; const_literal_iterator it;};
+  vector<StackElem> stack(1, {l, r, r->begin()});
+
+  // Process each call on the stack until it is empty.
+  while (!stack.empty()) {
+    auto elem = stack.back();
+    const int lit = elem.lit;
+    const Clause* reason = elem.reason;
+    auto it = elem.it;
+
+    bool stop {false};
+    for (; !stop && it != reason->end(); ++it) {
+      const int other = *it;
+      if (other == lit)
+        continue;
+      Var &v = var (other);
+      Flags &f = flags (other);
+      if (f.seen)
+        continue;                 // we would like to assert this:
+      analyzed.push_back (other); // assert (val (other) < 0);
+      f.seen = true;              // but we cannot because we have
+      if (!v.level) {             // already backtracked (sometimes)
+        const unsigned uidx =
+            vlit (-other);                // nevertheless we can use var (l)
+        uint64_t id = unit_clauses[uidx]; // as if l was still assigned
+        assert (id);                      // because var is updated lazily
+        lrat_chain.push_back (id);
+        continue;
+      }
+      if (v.reason) { // emulate recursive justification
+        stack.push_back ({other, v.reason, v.reason->begin()});
+        stop = true; // advance iterator, then stop processing this element ("recurse")
+      }
+    }
+
+    if (stop) {
+      // remember current iterator position in the element we just processed
+      stack[stack.size()-2].it = it;
+    } else {
+      // stack element processed completely
+      lrat_chain.push_back (reason->id);
+      stack.pop_back();
+    }
+  }
 }
 
 // calculate lrat_chain
