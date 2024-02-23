@@ -136,6 +136,7 @@ void Internal::minimize_clause () {
 // go backwards in reason graph and add ids
 // mini_chain is in correct order so we have to add it to minimize_chain
 // and then reverse when we put it on lrat_chain
+/*
 void Internal::calculate_minimize_chain (int lit) {
   assert (val (lit) > 0);
   Flags &f = flags (lit);
@@ -165,6 +166,64 @@ void Internal::calculate_minimize_chain (int lit) {
     calculate_minimize_chain (-other);
   }
   mini_chain.push_back (v.reason->id);
+}
+*/
+void Internal::calculate_minimize_chain (int l) {
+
+  struct StackElem {int lit; const_literal_iterator i {nullptr};};
+  vector<StackElem> stack(1, {l});
+
+  while (!stack.empty ()) {
+    auto& elem = stack.back ();
+    const int lit = elem.lit;
+
+    // Head of recursive method with base cases
+    if (!elem.i) {
+      assert (val (lit) > 0);
+      Flags &f = flags (lit);
+      Var &v = var (lit);
+      assert (!v.level || f.removable || f.keep);
+      if (f.keep || f.added) {
+        stack.pop_back ();
+        continue;
+      }
+      if (!v.level) {
+        if (f.seen) {
+          stack.pop_back ();
+          continue;
+        }
+        f.seen = true;
+        analyzed.push_back (lit);
+        const unsigned uidx = vlit (lit); // I didn't clean added flag
+        uint64_t id = unit_clauses[uidx];
+        assert (id);
+        unit_chain.push_back (id);
+        stack.pop_back ();
+        continue;
+      }
+      f.added = true;
+      assert (v.reason && f.removable);
+      elem.i = v.reason->begin ();
+    }
+
+    auto reason = var (lit).reason;
+    const const_literal_iterator end = reason->end ();
+
+    // Skipping iterations in the recursive method's loop
+    while (elem.i != end && *elem.i == lit) ++elem.i;
+
+    // End condition for the recursive method's loop
+    if (elem.i == end) {
+      mini_chain.push_back (reason->id);
+      stack.pop_back ();
+      continue;
+    }
+
+    // Proper iteration ("recursive call") in the recursive method's loop
+    const int other = *elem.i;
+    ++elem.i;
+    stack.push_back ({-other});
+  }
 }
 
 // Sort the literals in reverse assignment order (thus trail order) to
