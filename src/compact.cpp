@@ -213,15 +213,17 @@ void Internal::compact () {
       continue;
     }
     assert (eidx > 0);
-    assert (external->ext_units.size () >= (size_t) 2 * eidx + 1);
-    uint64_t id1 = external->ext_units[2 * eidx];
-    uint64_t id2 = external->ext_units[2 * eidx + 1];
-    assert (!id1 || !id2);
-    if (!id1 && !id2) {
-      uint64_t new_id1 = unit_clauses[2 * src];
-      uint64_t new_id2 = unit_clauses[2 * src + 1];
-      external->ext_units[2 * eidx] = new_id1;
-      external->ext_units[2 * eidx + 1] = new_id2;
+    if (opts.lrat) {
+      assert (external->ext_units.size () >= (size_t) 2 * eidx + 1);
+      uint64_t id1 = external->ext_units[2 * eidx];
+      uint64_t id2 = external->ext_units[2 * eidx + 1];
+      assert (!id1 || !id2);
+      if (!id1 && !id2) {
+        uint64_t new_id1 = unit_clauses[2 * src];
+        uint64_t new_id2 = unit_clauses[2 * src + 1];
+        external->ext_units[2 * eidx] = new_id1;
+        external->ext_units[2 * eidx + 1] = new_id2;
+      }
     }
     int dst = mapper.map_lit (src);
     LOG ("compact %" PRId64
@@ -232,7 +234,7 @@ void Internal::compact () {
 
   // Delete garbage units. Needs to occur before resizing unit_clauses
   //
-  for (auto src : internal->vars) {
+  if (opts.lrat) for (auto src : internal->vars) {
     const int dst = mapper.map_idx (src);
     assert (dst <= src);
     const signed char tmp = internal->val (src);
