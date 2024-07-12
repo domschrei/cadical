@@ -1482,6 +1482,9 @@ struct Internal {
       auto current_remainder = (clause_id - opts.lratorigclscount) % opts.lratsolvercount;
       clause_id += opts.lratsolverid - current_remainder;
       if (clause_id > (uint64_t) opts.lratorigclscount) clause_id -= opts.lratsolvercount;
+      // In order to avoid clashing with any prior solvers computing with the same solver ID,
+      // begin your own clauses at an according offset (but still with the right remainder!)
+      clause_id += opts.lratskippedepochs * opts.lratsolvercount * 1e8;
     }
     // Go to next clause ID
     clause_id += opts.lratsolvercount;
