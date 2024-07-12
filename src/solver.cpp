@@ -1063,6 +1063,11 @@ void Solver::trace_proof_internally(
   }
 }
 
+void Solver::profile_to_file (const char *path) {
+  internal->profile_report_path = path;
+  internal->print_profile ();
+}
+
 void Solver::flush_proof_trace (bool print_statistics_unless_quiet) {
   LOG_API_CALL_BEGIN ("flush_proof_trace");
   REQUIRE_VALID_STATE ();

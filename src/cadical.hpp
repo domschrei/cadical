@@ -743,6 +743,8 @@ public:
   // Forward LRAT proof information to custom callbacks which handle the checking.
   void trace_proof_internally (LratCallbackProduceClause cbProduce, LratCallbackImportClause cbImport, LratCallbackDeleteClauses cbDelete);
 
+  void profile_to_file (const char *path);
+
   // Flushing the proof trace file eventually calls 'fflush' on the actual
   // file or pipe and thus if this function returns all the proof steps
   // should have been written (with the same guarantees as 'fflush').
