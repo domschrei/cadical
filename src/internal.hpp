@@ -1478,13 +1478,19 @@ struct Internal {
     prev_clause_id = clause_id;
     assert (clause_id >= (uint64_t) opts.lratorigclscount);
     if (clause_id == (uint64_t) opts.lratorigclscount) {
-      // Switch from original to redundant (derived) clauses.
-      // Align clause ID at the correct remainder mod #solvers
-      auto current_remainder = (clause_id - opts.lratorigclscount) % opts.lratsolvercount;
-      clause_id += opts.lratsolverid - current_remainder;
-      if (clause_id > (uint64_t) opts.lratorigclscount) clause_id -= opts.lratsolvercount;
-      // In order to avoid clashing with any prior solvers computing with the same solver ID,
-      // begin your own clauses at an according offset (but still with the right remainder!)
+      // Here we switch from original to redundant (derived) clauses.
+      // We need to align the clause ID at the correct remainder mod p (= #solvers),
+      // with lratsolverid being in [0, p). Since the clause ID is increased by
+      // #solvers below before returning it, we are leaving a gap of (#solvers -1)
+      // in the assigned IDs, but that's not a problem and it allows for the
+      // plain and simple invariant that each ID i was produced by solver j
+      // if and only if (i - o) mod p = j.
+      clause_id += opts.lratsolverid;
+      // If the provided options indicate that there are (possibly) X prior solvers
+      // which were using the same solver ID for producing clauses, then add an according
+      // offset to your clause ID domain (while preserving your remainder mod p).
+      // The offset is chosen in such a way that every solver can assign 10'000
+      // clauses per second for 10'000 seconds before adjacent intervals collide.
       clause_id += ((uint64_t) opts.lratskippedepochs) * opts.lratsolvercount * 1e8;
     }
     // Go to next clause ID
