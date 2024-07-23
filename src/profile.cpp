@@ -18,15 +18,14 @@ Profiles::Profiles (Internal *s)
 }
 
 void Internal::start_profiling (Profile &profile, double s) {
-  assert (profile.level <= opts.profile);
+  if (profile.level > opts.profile) return;
   assert (!profile.active);
   profile.started = s;
   profile.active = true;
 }
 
 void Internal::stop_profiling (Profile &profile, double s) {
-  assert (profile.level <= opts.profile);
-  assert (profile.active);
+  if (profile.level > opts.profile || !profile.active) return;
   profile.value += s - profile.started;
   profile.active = false;
 }
@@ -47,6 +46,17 @@ double Internal::update_profiles () {
   return now;
 }
 
+void Internal::conclude_profiles () {
+#define PROFILE(NAME, LEVEL) \
+  do { \
+    Profile &profile = profiles.NAME; \
+    profile.level = 999; \
+    profile.active = false; \
+  } while (0);
+  PROFILES
+#undef PROFILE
+}
+
 double Internal::solve_time () {
   (void) update_profiles ();
   return profiles.solve.value;
@@ -58,6 +68,7 @@ double Internal::solve_time () {
 void Internal::print_profile () {
   FILE* f = nullptr;
   if (internal->profile_report_path) {
+    conclude_profiles (); // disable any further profiling
     f = fopen (internal->profile_report_path, "w");
   }
 
