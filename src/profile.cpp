@@ -30,7 +30,7 @@ void Internal::stop_profiling (Profile &profile, double s) {
   profile.active = false;
 }
 
-double Internal::update_profiles () {
+double Internal::update_profiles (const bool conclude) {
   double now = time ();
 #define PROFILE(NAME, LEVEL) \
   do { \
@@ -40,25 +40,18 @@ double Internal::update_profiles () {
       profile.value += now - profile.started; \
       profile.started = now; \
     } \
+    if (conclude) { \
+      profile.level = 999; \
+      profile.active = false; \
+    } \
   } while (0);
   PROFILES
 #undef PROFILE
   return now;
 }
 
-void Internal::conclude_profiles () {
-#define PROFILE(NAME, LEVEL) \
-  do { \
-    Profile &profile = profiles.NAME; \
-    profile.level = 999; \
-    profile.active = false; \
-  } while (0);
-  PROFILES
-#undef PROFILE
-}
-
 double Internal::solve_time () {
-  (void) update_profiles ();
+  (void) update_profiles (false);
   return profiles.solve.value;
 }
 
@@ -68,11 +61,10 @@ double Internal::solve_time () {
 void Internal::print_profile () {
   FILE* f = nullptr;
   if (internal->profile_report_path) {
-    conclude_profiles (); // disable any further profiling
     f = fopen (internal->profile_report_path, "w");
   }
 
-  double now = update_profiles ();
+  double now = update_profiles (true); // disable any further profiling
   const char *time_type = opts.realtime ? "real" : "process";
   if (!f) {
     SECTION ("run-time profiling");

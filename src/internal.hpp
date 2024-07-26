@@ -1266,8 +1266,7 @@ struct Internal {
   void start_profiling (Profile &p, double);
   void stop_profiling (Profile &p, double);
 
-  double update_profiles (); // Returns 'time ()'.
-  void conclude_profiles ();
+  double update_profiles (bool conclude); // Returns 'time ()'.
   void print_profile ();
 #endif
 
