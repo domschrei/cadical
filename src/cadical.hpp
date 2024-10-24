@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <vector>
+#include "onthefly_checking.hpp"
 
 namespace CaDiCaL {
 
@@ -205,6 +206,7 @@ struct External;
 // Forward declaration of call-back classes. See bottom of this file.
 
 class Learner;
+class LearnSource;
 class FixedAssignmentListener;
 class Terminator;
 class ClauseIterator;
@@ -358,6 +360,21 @@ public:
   //
   void connect_learner (Learner *learner);
   void disconnect_learner ();
+
+  void connect_learn_source (LearnSource * learnSource);
+  void disconnect_learn_source ();
+
+  struct Statistics {
+    int64_t conflicts;    // generated conflicts in 'propagate'
+    int64_t decisions;    // number of decisions in 'decide'
+    int64_t propagations; // total # propagations
+    int64_t restarts;     // total # restarts
+    // monitoring of internally imported / discarded clauses
+    unsigned long imported;
+    unsigned long discarded;
+    unsigned long r_wit,r_el,r_fx;
+  };
+  Statistics get_stats ();
 
   // ====== END IPASIR =====================================================
 
@@ -756,6 +773,10 @@ public:
   //
   bool trace_proof (FILE *file, const char *name); // Write DRAT proof.
   bool trace_proof (const char *path);             // Open & write proof.
+// Forward LRAT proof information to custom callbacks which handle the checking.
+  void trace_proof_internally (LratCallbackProduceClause cbProduce, LratCallbackImportClause cbImport, LratCallbackDeleteClauses cbDelete);
+
+  void profile_to_file (const char *path);
 
   // Flushing the proof trace file eventually calls 'fflush' on the actual
   // file or pipe and thus if this function returns all the proof steps
@@ -789,6 +810,8 @@ public:
   //   ensure (VALID)
   //
   void close_proof_trace (bool print = false);
+
+  void close_proof_asynchronously ();
 
   // Enables clausal proof tracing with or without antecedents using
   // the Tracer interface defined in 'tracer.hpp'
@@ -1116,7 +1139,15 @@ class Learner {
 public:
   virtual ~Learner () {}
   virtual bool learning (int size) = 0;
-  virtual void learn (int lit) = 0;
+  virtual void append_literal (int lit) = 0;
+  virtual void publish_clause (uint64_t id, int glue, const uint8_t* signatureData, int signatureSize) = 0;
+};
+
+class LearnSource {
+public:
+  virtual ~LearnSource () { }
+  virtual bool hasNextClause () = 0;
+  virtual const std::vector<int>& getNextClause (uint64_t& id, int& glue, std::vector<uint8_t>*& signature) = 0;
 };
 
 // Connected listener gets notified whenever the truth value of a variable is

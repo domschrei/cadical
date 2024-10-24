@@ -178,12 +178,12 @@ FILE *File::open_file (Internal *internal, const char *path,
 }
 
 FILE *File::read_file (Internal *internal, const char *path) {
-  MSG ("opening file to read '%s'", path);
+  //MSG ("opening file to read '%s'", path);
   return open_file (internal, path, "r");
 }
 
 FILE *File::write_file (Internal *internal, const char *path) {
-  MSG ("opening file to write '%s'", path);
+  //MSG ("opening file to write '%s'", path);
   return open_file (internal, path, "wb");
 }
 

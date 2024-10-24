@@ -17,7 +17,7 @@ void Internal::learn_empty_clause () {
   build_chain_for_empty ();
   LOG ("learned empty clause");
   external->check_learned_empty_clause ();
-  int64_t id = ++clause_id;
+  int64_t id = next_lrat_id ();
   if (proof) {
     proof->add_derived_empty_clause (id, lrat_chain);
   }
@@ -32,12 +32,15 @@ void Internal::learn_unit_clause (int lit) {
   assert (!unsat);
   LOG ("learned unit clause %d", lit);
   external->check_learned_unit_clause (lit);
-  int64_t id = ++clause_id;
+  int64_t id = next_lrat_id ();
   const unsigned uidx = vlit (lit);
   unit_clauses[uidx] = id;
+  register_lrat_id_of_unit_ilit (id, lit);
   if (proof) {
     proof->add_derived_unit_clause (id, lit, lrat_chain);
   }
+  if (!opts.signsharedcls)
+    external->export_learned_internal_unit_clause (id, lit);
   mark_fixed (lit);
 }
 
@@ -938,7 +941,7 @@ void Internal::analyze () {
   //
   if (!level) {
     learn_empty_clause ();
-    if (external->learner)
+    if (!opts.signsharedcls)
       external->export_learned_empty_clause ();
     // lrat_chain.clear (); done in learn_empty_clause
     STOP (analyze);
@@ -1097,11 +1100,7 @@ void Internal::analyze () {
     //
     if (opts.bump)
       bump_variables ();
-
-    if (external->learner)
-      external->export_learned_large_clause (clause);
-  } else if (external->learner)
-    external->export_learned_unit_clause (-uip);
+  }
 
   // Update actual size statistics.
   //

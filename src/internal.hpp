@@ -35,6 +35,7 @@ extern "C" {
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <fstream>
 
 /*------------------------------------------------------------------------*/
 
@@ -275,6 +276,7 @@ struct Internal {
   Arena arena;          // memory arena for moving garbage collector
   Format error_message; // provide persistent error message
   string prefix;        // verbose messages prefix
+  const char *profile_report_path {nullptr};
 
   Internal *internal; // proxy to 'this' in macros
   External *external; // proxy to 'external' buddy in 'Solver'
@@ -561,7 +563,7 @@ struct Internal {
   // Managing clauses in 'clause.cpp'.  Without explicit 'Clause' argument
   // these functions work on the global temporary 'clause'.
   //
-  Clause *new_clause (bool red, int glue = 0);
+  Clause* new_clause (bool red, int glue = 0, bool doExport = true, uint64_t id = 0);
   void promote_clause (Clause *, int new_glue);
   size_t shrink_clause (Clause *, int new_size);
   void minimize_sort_clause ();
@@ -1126,6 +1128,17 @@ struct Internal {
     return (f.assumed & bit) != 0;
   }
 
+  // Import learnt clauses from an external source.
+  bool importing ();
+  void import_redundant_clauses (int& res);
+  void handle_incoming_clause (uint64_t id, int glue, std::vector<int>& cls, const std::vector<uint8_t>& sig);
+  void try_import_unit (uint64_t id, int elit, bool simplified, const std::vector<uint8_t>& sig);
+  void add_clause_to_proof (uint64_t id);
+  void validate_clause_and_add_as_axiom (uint64_t id, std::vector<int>& cls, const std::vector<uint8_t>& sig);
+  uint64_t last_added_import_id {0};
+  int last_glue {0};
+  bool add_next_derived_clause_as_axiom {false};
+
   // Add temporary clause as constraint.
   //
   void constrain (int); // Add literal to constraint.
@@ -1238,7 +1251,7 @@ struct Internal {
   void start_profiling (Profile &p, double);
   void stop_profiling (Profile &p, double);
 
-  double update_profiles (); // Returns 'time ()'.
+  double update_profiles (bool conclude); // Returns 'time ()'.
   void print_profile ();
 #endif
 
@@ -1446,6 +1459,52 @@ struct Internal {
   // Warning messages.
   //
   void warning (const char *, ...) CADICAL_ATTRIBUTE_FORMAT (2, 3);
+
+  uint64_t prev_clause_id {0};
+  std::ofstream dbg_ofs_import_simplifications;
+
+  uint64_t next_lrat_id () {
+    prev_clause_id = clause_id;
+    assert (clause_id >= (uint64_t) opts.lratorigclscount);
+    if (clause_id == (uint64_t) opts.lratorigclscount) {
+      // Here we switch from original to redundant (derived) clauses.
+      // We need to align the clause ID at the correct remainder mod p (= #solvers),
+      // with lratsolverid being in [0, p). Since the clause ID is increased by
+      // #solvers below before returning it, we are leaving a gap of (#solvers -1)
+      // in the assigned IDs, but that's not a problem and it allows for the
+      // plain and simple invariant that each ID i was produced by solver j
+      // if and only if (i - o) mod p = j.
+      clause_id += opts.lratsolverid;
+      // If the provided options indicate that there are (possibly) X prior solvers
+      // which were using the same solver ID for producing clauses, then add an according
+      // offset to your clause ID domain (while preserving your remainder mod p).
+      // The offset is chosen in such a way that every solver can assign 10'000
+      // clauses per second for 10'000 seconds before adjacent intervals collide.
+      clause_id += ((uint64_t) opts.lratskippedepochs) * opts.lratsolvercount * 1e8;
+    }
+    // Go to next clause ID
+    clause_id += opts.lratsolvercount;
+    return clause_id;
+  }
+  bool is_locally_produced_lrat_id (uint64_t id) {
+    return (id - opts.lratorigclscount) % opts.lratsolvercount == (uint64_t) opts.lratsolverid;
+  }
+  void backtrack_last_lrat_id () {
+    clause_id = prev_clause_id;
+  }
+
+  void register_lrat_id_of_unit_elit (uint64_t id, int elit) {
+    auto& unit_ids = external->ext_units;
+    unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
+    assert (eidx < unit_ids.size ());
+    unit_ids[eidx] = id;
+  }
+  void register_lrat_id_of_unit_ilit (uint64_t id, int ilit) {
+    int elit = externalize (ilit);
+    register_lrat_id_of_unit_elit (id, elit);
+  }
+
+  void learn_imported_unit_clause (uint64_t id, int lit);
 };
 
 // Fatal internal error which leads to abort.

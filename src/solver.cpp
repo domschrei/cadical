@@ -1,4 +1,6 @@
 #include "internal.hpp"
+#include "internallrattracer.hpp"
+#include "onthefly_checking.hpp"
 
 /*------------------------------------------------------------------------*/
 
@@ -907,6 +909,34 @@ void Solver::disconnect_learner () {
   LOG_API_CALL_END ("disconnect_learner");
 }
 
+void Solver::connect_learn_source (LearnSource * learnSource) {
+  external->learnSource = learnSource;
+}
+void Solver::disconnect_learn_source () {
+  external->learnSource = 0;
+}
+
+Solver::Statistics Solver::get_stats () {
+  Statistics s;
+  s.conflicts = internal->stats.conflicts;
+  s.decisions = internal->stats.decisions;
+  s.propagations = 0;
+  s.propagations += internal->stats.propagations.cover;
+  s.propagations += internal->stats.propagations.instantiate;
+  s.propagations += internal->stats.propagations.probe;
+  s.propagations += internal->stats.propagations.search;
+  s.propagations += internal->stats.propagations.transred;
+  s.propagations += internal->stats.propagations.vivify;
+  s.propagations += internal->stats.propagations.walk;
+  s.restarts = internal->stats.restarts;
+  s.imported = internal->stats.clauseimport.imported;
+  s.discarded = internal->stats.clauseimport.discarded;
+  s.r_el = internal->stats.clauseimport.r_el;
+  s.r_fx = internal->stats.clauseimport.r_fx;
+  s.r_wit = internal->stats.clauseimport.r_wit;
+  return s;
+}
+
 /*===== IPASIR END =======================================================*/
 
 void Solver::connect_fixed_listener (FixedAssignmentListener *fixed_listener) {
@@ -1074,6 +1104,9 @@ bool Solver::trace_proof (FILE *external_file, const char *name) {
   File *internal_file = File::write (internal, external_file, name);
   assert (internal_file);
   internal->trace (internal_file);
+  if (internal->opts.lrat) {
+    internal->reserve_ids (internal->opts.lratorigclscount);
+  }
   LOG_API_CALL_RETURNS ("trace_proof", name, true);
   return true;
 }
@@ -1088,8 +1121,30 @@ bool Solver::trace_proof (const char *path) {
   File *internal_file = File::write (internal, path);
   bool res = (internal_file != 0);
   internal->trace (internal_file);
+  if (internal->opts.lrat) {
+    internal->reserve_ids (internal->opts.lratorigclscount);
+  }
   LOG_API_CALL_RETURNS ("trace_proof", path, res);
   return res;
+}
+
+void Solver::trace_proof_internally(
+  LratCallbackProduceClause cbProduce, LratCallbackImportClause cbImport, LratCallbackDeleteClauses cbDelete
+) {
+  REQUIRE_VALID_STATE ();
+  REQUIRE (
+      state () == CONFIGURING,
+      "can only start proof tracing right after initialization");
+  FileTracer *ft = new InternalLratTracer (internal, cbProduce, cbImport, cbDelete);
+  connect_proof_tracer (ft, true);
+  if (internal->opts.lrat) {
+    internal->reserve_ids (internal->opts.lratorigclscount);
+  }
+}
+
+void Solver::profile_to_file (const char *path) {
+  internal->profile_report_path = path;
+  internal->print_profile ();
 }
 
 void Solver::flush_proof_trace (bool print_statistics_unless_quiet) {
@@ -1110,6 +1165,10 @@ void Solver::close_proof_trace (bool print_statistics_unless_quiet) {
            "proof trace already closed");
   internal->close_trace (print_statistics_unless_quiet);
   LOG_API_CALL_END ("close_proof_trace");
+}
+
+void Solver::close_proof_asynchronously () {
+  for (auto& tracer : internal->file_tracers) tracer->stop_asynchronously ();
 }
 
 /*------------------------------------------------------------------------*/

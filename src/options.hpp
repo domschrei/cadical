@@ -110,6 +110,12 @@ OPTION( lidrup,            0,  0,  1,0,0,1, "linear incremental proof format") \
 LOGOPT( log,               0,  0,  1,0,0,0, "enable logging") \
 LOGOPT( logsort,           0,  0,  1,0,0,0, "sort logged clauses") \
 OPTION( lrat,              0,  0,  1,0,0,1, "use LRAT proof format") \
+OPTION( lratdebug,         0,  0,  1,0,0,1, "output debugging files for simplified external clauses") \
+OPTION( lratdeletelines,   1,  0,  1,0,0,1, "output LRAT deletion lines") \
+OPTION( lratorigclscount,  0,  0,2e9,0,0,1, "number of original clauses in the problem") \
+OPTION( lratskippedepochs, 0,  0,2e9,0,0,1, "skip this many blocks of potential ID domains") \
+OPTION( lratsolvercount,   1,  0,2e9,0,0,1, "number of solvers in the computation") \
+OPTION( lratsolverid,      0,  0,2e9,0,0,1, "internal ID of this particular solver") \
 OPTION( lucky,             1,  0,  1,0,0,1, "search for lucky phases") \
 OPTION( minimize,          1,  0,  1,0,0,1, "minimize learned clauses") \
 OPTION( minimizedepth,   1e3,  0,1e3,0,0,1, "minimization depth") \
@@ -154,6 +160,7 @@ OPTION( shuffle,           0,  0,  1,0,0,1, "shuffle variables") \
 OPTION( shufflequeue,      1,  0,  1,0,0,1, "shuffle variable queue") \
 OPTION( shufflerandom,     0,  0,  1,0,0,1, "not reverse but random") \
 OPTION( shufflescores,     1,  0,  1,0,0,1, "shuffle variable scores") \
+OPTION( signsharedcls,     0,  0,  1,0,0,1, "on-the-fly checking with shared clause signing") \
 OPTION( stabilize,         1,  0,  1,0,0,1, "enable stabilizing phases") \
 OPTION( stabilizefactor, 200,101,2e9,0,0,1, "phase increase in percent") \
 OPTION( stabilizeint,    1e3,  1,2e9,0,0,1, "stabilizing interval") \

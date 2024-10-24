@@ -32,7 +32,7 @@ struct Wrapper : Learner, Terminator {
     return size <= learner.max_length;
   }
 
-  void learn (int lit) {
+  void append_literal (int lit) {
     if (learner.end_clause == learner.capacity_clause) {
       size_t count = learner.end_clause - learner.begin_clause;
       size_t size = count ? 2 * count : 1;
@@ -42,8 +42,10 @@ struct Wrapper : Learner, Terminator {
       learner.capacity_clause = learner.begin_clause + size;
     }
     *learner.end_clause++ = lit;
-    if (lit)
-      return;
+  }
+
+  void publish_clause (uint64_t id, int glue, const uint8_t* sigData, int sigSize) {
+    append_literal (0);
     learner.function (learner.state, learner.begin_clause);
     learner.end_clause = learner.begin_clause;
   }

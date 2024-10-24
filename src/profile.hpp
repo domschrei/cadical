@@ -89,7 +89,7 @@ struct Profile {
   double value;     // accumulated time
   double started;   // started time if active
   const char *name; // name of the profiled function (or 'phase')
-  const int level;  // allows to cheaply test if profiling is enabled
+  int level;  // allows to cheaply test if profiling is enabled
 
   Profile (const char *n, int l)
       : active (false), value (0), name (n), level (l) {}

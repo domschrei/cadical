@@ -76,8 +76,18 @@ inline void LratTracer::put_binary_id (int64_t id) {
 
 /*------------------------------------------------------------------------*/
 
-void LratTracer::lrat_add_clause (uint64_t id, const vector<int> &clause,
+void LratTracer::lrat_add_clause (uint64_t id, bool redundant,
+                                  const vector<int> &clause,
                                   const vector<uint64_t> &chain) {
+
+  assert (!internal->opts.signsharedcls);
+
+  // sanity check
+  if (id <= latest_id) {
+    printf("ERROR - added import ID %lu out of order (prev: %lu)!\n", id, latest_id);
+    abort();
+  }
+
   if (delete_ids.size ()) {
     if (!binary)
       file->put (latest_id), file->put (" ");
@@ -98,6 +108,12 @@ void LratTracer::lrat_add_clause (uint64_t id, const vector<int> &clause,
     delete_ids.clear ();
   }
   latest_id = id;
+
+  if (clause.size () == 1) {
+    // Remember the ID of this unit clause as an *external* literal
+    // so that internal variable domain compacting does not destroy the mapping.
+    internal->register_lrat_id_of_unit_elit (id, clause[0]);
+  }
 
   if (binary)
     file->put ('a'), put_binary_id (id);
@@ -124,21 +140,22 @@ void LratTracer::lrat_add_clause (uint64_t id, const vector<int> &clause,
 }
 
 void LratTracer::lrat_delete_clause (uint64_t id) {
+  if (!internal->opts.lratdeletelines) return;
   delete_ids.push_back (id); // pushing off deletion for later
 }
 
 /*------------------------------------------------------------------------*/
 
-void LratTracer::add_derived_clause (uint64_t id, bool,
+void LratTracer::add_derived_clause (uint64_t id, bool redundant,
                                      const vector<int> &clause,
                                      const vector<uint64_t> &chain) {
-  if (file->closed ())
-    return;
+  mtx_write.lock ();
   LOG ("LRAT TRACER tracing addition of derived clause");
-  lrat_add_clause (id, clause, chain);
+  lrat_add_clause (id, redundant, clause, chain);
 #ifndef QUIET
   added++;
 #endif
+  mtx_write.unlock ();
 }
 
 void LratTracer::delete_clause (uint64_t id, bool, const vector<int> &) {
@@ -201,6 +218,15 @@ void LratTracer::flush (bool print) {
 #else
   (void) print;
 #endif
+}
+
+void LratTracer::stop_asynchronously() {
+  mtx_write.lock (); // never gets unlocked!
+  if (closed ()) {
+    return;
+  }
+  flush(false);
+  close(false);
 }
 
 } // namespace CaDiCaL

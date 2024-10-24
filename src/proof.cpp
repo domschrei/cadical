@@ -435,7 +435,7 @@ void Proof::flush_clause (Clause *c) {
   }
   proof_chain.push_back (c->id);
   redundant = c->redundant;
-  int64_t id = ++internal->clause_id;
+  int64_t id = internal->next_lrat_id ();
   clause_id = id;
   add_derived_clause ();
   delete_clause (c);
@@ -458,7 +458,7 @@ void Proof::strengthen_clause (Clause *c, int remove,
       continue;
     add_literal (internal_lit);
   }
-  int64_t id = ++internal->clause_id;
+  int64_t id = internal->next_lrat_id ();
   clause_id = id;
   redundant = c->redundant;
   for (const auto &cid : chain)
@@ -476,7 +476,7 @@ void Proof::otfs_strengthen_clause (Clause *c, const std::vector<int> &old,
     int internal_lit = c->literals[i];
     add_literal (internal_lit);
   }
-  int64_t id = ++internal->clause_id;
+  int64_t id = internal->next_lrat_id ();
   clause_id = id;
   redundant = c->redundant;
   for (const auto &cid : chain)

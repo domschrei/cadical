@@ -5,6 +5,8 @@
 
 #include "range.hpp"
 #include <unordered_map>
+#include <cstdint>
+#include <vector>
 
 /*------------------------------------------------------------------------*/
 
@@ -92,10 +94,13 @@ struct External {
   // If there is a learner export learned clauses.
 
   Learner *learner;
+  LearnSource *learnSource;
 
   void export_learned_empty_clause ();
-  void export_learned_unit_clause (int ilit);
-  void export_learned_large_clause (const vector<int> &);
+  void export_learned_external_unit_clause (uint64_t id, int elit, const uint8_t* sigData, int sigSize);
+  void export_learned_external_large_clause (uint64_t id, const vector<int> &, int glue, const uint8_t* sigData, int sigSize);
+  void export_learned_internal_unit_clause (uint64_t id, int ilit);
+  void export_learned_internal_large_clause (uint64_t id, const vector<int> &, int glue);
 
   // If there is a listener for fixed assignments.
 

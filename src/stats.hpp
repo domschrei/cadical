@@ -259,6 +259,16 @@ struct Stats {
   int64_t active;   // number of active variables
   int64_t inactive; // number of inactive variables
 
+  struct {
+    unsigned long imported;
+    unsigned long discarded;
+    unsigned long r_wit,r_el,r_fx;
+  } clauseimport;
+
+  unsigned long produced_cls {0};
+  unsigned long incoming_cls {0};
+  unsigned long validated_incoming_cls {0};
+
   Stats ();
 
   void print (Internal *);

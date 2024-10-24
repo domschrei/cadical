@@ -73,7 +73,7 @@ void Internal::mark_added (Clause *c) {
 
 /*------------------------------------------------------------------------*/
 
-Clause *Internal::new_clause (bool red, int glue) {
+Clause * Internal::new_clause (bool red, int glue, bool doExport, uint64_t id) {
 
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();
@@ -95,7 +95,7 @@ Clause *Internal::new_clause (bool red, int glue) {
   size_t bytes = Clause::bytes (size);
   Clause *c = (Clause *) new char[bytes];
 
-  c->id = ++clause_id;
+  c->id = id == 0 ? next_lrat_id () : id;
 
   c->conditioned = false;
   c->covered = false;
@@ -121,6 +121,13 @@ Clause *Internal::new_clause (bool red, int glue) {
 
   for (int i = 0; i < size; i++)
     c->literals[i] = clause[i];
+
+  // export redundant clause
+  if (red) {
+    if (!opts.signsharedcls && doExport)
+      external->export_learned_internal_large_clause (c->id, clause, glue);
+    last_glue = glue;
+  }
 
   // Just checking that we did not mess up our sophisticated memory layout.
   // This might be compiler dependent though. Crucial for correctness.
@@ -336,6 +343,7 @@ void Internal::assign_original_unit (uint64_t id, int lit) {
   num_assigned++;
   const unsigned uidx = vlit (lit);
   unit_clauses[uidx] = id;
+  register_lrat_id_of_unit_ilit (id, lit);
   LOG ("original unit assign %d", lit);
   assert (num_assigned == trail.size () || level);
   mark_fixed (lit);
@@ -435,7 +443,7 @@ void Internal::add_new_original_clause (uint64_t id) {
     uint64_t new_id = id;
     const size_t size = clause.size ();
     if (original.size () > size) {
-      new_id = ++clause_id;
+      new_id = next_lrat_id ();
       if (proof) {
         if (lrat)
           lrat_chain.push_back (id);
@@ -479,6 +487,7 @@ void Internal::add_new_original_clause (uint64_t id) {
         v.reason = 0;
         const unsigned uidx = vlit (clause[0]);
         unit_clauses[uidx] = new_id;
+        register_lrat_id_of_unit_ilit (new_id, clause[0]);
         mark_fixed (clause[0]);
       } else {
         const int lit = clause[0];
@@ -499,7 +508,7 @@ void Internal::add_new_original_clause (uint64_t id) {
       bool clause_redundancy = from_propagator && ext_clause_forgettable;
       Clause *c = new_clause (clause_redundancy, glue);
       c->id = new_id;
-      clause_id--;
+      backtrack_last_lrat_id ();
       watch_clause (c);
       clause.clear ();
       original.clear ();

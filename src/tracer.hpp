@@ -20,6 +20,8 @@ public:
   Tracer () {}
   virtual ~Tracer () {}
 
+  virtual void stop_asynchronously () {}
+
   /*------------------------------------------------------------------------*/
   /*                                                                        */
   /*                            Basic Events */
@@ -33,6 +35,9 @@ public:
   virtual void add_original_clause (uint64_t, bool,
                                     const std::vector<int> &,
                                     bool = false) {}
+
+  virtual void add_original_clause_with_signature (uint64_t, const std::vector<int> &,
+                                    const std::vector<uint8_t>&) {}
 
   // Notify the observer that a new clause has been derived.
   // Includes ID and wether the clause is redundant or irredundant

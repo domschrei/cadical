@@ -194,8 +194,9 @@ void Internal::failing () {
             lrat_chain.push_back (id);
           }
         }
-        proof->add_assumption_clause (++clause_id, -efailed, lrat_chain);
-        conclusion.push_back (clause_id);
+        uint64_t new_id = next_lrat_id ();
+        proof->add_assumption_clause (new_id, -efailed, lrat_chain);
+        conclusion.push_back (new_id);
         lrat_chain.clear ();
       }
       goto DONE;
@@ -211,8 +212,9 @@ void Internal::failing () {
       f.failed |= bit;
       if (proof) {
         vector<int> clash = {externalize (failed), externalize (-failed)};
-        proof->add_assumption_clause (++clause_id, clash, lrat_chain);
-        conclusion.push_back (clause_id);
+        uint64_t new_id = next_lrat_id ();
+        proof->add_assumption_clause (new_id, clash, lrat_chain);
+        conclusion.push_back (new_id);
       }
       goto DONE;
     }
@@ -387,8 +389,9 @@ void Internal::failing () {
         vector<int> eclause;
         for (auto &lit : clause)
           eclause.push_back (externalize (lit));
-        proof->add_assumption_clause (++clause_id, eclause, lrat_chain);
-        conclusion.push_back (clause_id);
+        uint64_t new_id = next_lrat_id ();
+        proof->add_assumption_clause (new_id, eclause, lrat_chain);
+        conclusion.push_back (new_id);
       }
     } else {
       assert (!lrat || (constraint.size () == constraint_clauses.size () &&
@@ -414,8 +417,9 @@ void Internal::failing () {
           vector<int> eclause;
           for (auto &lit : clause)
             eclause.push_back (externalize (lit));
-          proof->add_assumption_clause (++clause_id, eclause, lrat_chain);
-          conclusion.push_back (clause_id);
+          uint64_t new_id = next_lrat_id ();
+          proof->add_assumption_clause (new_id, eclause, lrat_chain);
+          conclusion.push_back (new_id);
           lrat_chain.clear ();
         }
         clause.pop_back ();
@@ -438,8 +442,9 @@ void Internal::failing () {
               lrat_chain.push_back (id);
             }
           }
-          proof->add_assumption_clause (++clause_id, -elit, lrat_chain);
-          conclusion.push_back (clause_id);
+          uint64_t new_id = next_lrat_id ();
+          proof->add_assumption_clause (new_id, -elit, lrat_chain);
+          conclusion.push_back (new_id);
           lrat_chain.clear ();
         }
       }

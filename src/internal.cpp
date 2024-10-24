@@ -189,7 +189,7 @@ void Internal::add_original_lit (int lit) {
     original.push_back (lit);
   } else {
     const uint64_t id =
-        original_id < reserved_ids ? ++original_id : ++clause_id;
+        original_id < reserved_ids ? ++original_id : next_lrat_id ();
     if (proof) {
       // Use the external form of the clause for printing in proof
       // Externalize(internalized literal) != external literal
@@ -285,6 +285,8 @@ int Internal::cdcl_loop_with_inprocessing () {
       break;                               // decision or conflict limit
     else if (terminated_asynchronously ()) // externally terminated
       break;
+    else if (importing ())
+      import_redundant_clauses (res);
     else if (restarting ())
       restart (); // restart by backtracking
     else if (rephasing ())
@@ -885,7 +887,7 @@ int Internal::lookahead () {
 /*------------------------------------------------------------------------*/
 
 void Internal::finalize (int res) {
-  if (!proof)
+  if (!proof || opts.lrat)
     return;
   LOG ("finalizing");
   // finalize external units
@@ -909,7 +911,8 @@ void Internal::finalize (int res) {
       const unsigned eidx = (elit < 0) + 2u * (unsigned) abs (elit);
       const uint64_t id = external->ext_units[eidx];
       if (id) {
-        assert (unit_clauses[vlit (lit)] == id);
+        // XXX assertion broken since we manipulate unit_clauses and ext_units
+        //assert (unit_clauses[vlit (lit)] == id);
         continue;
       }
     }

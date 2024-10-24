@@ -1,3 +1,6 @@
+
+#include <cstdio>
+
 #ifndef QUIET
 
 #include "internal.hpp"
@@ -15,20 +18,19 @@ Profiles::Profiles (Internal *s)
 }
 
 void Internal::start_profiling (Profile &profile, double s) {
-  assert (profile.level <= opts.profile);
+  if (profile.level > opts.profile) return;
   assert (!profile.active);
   profile.started = s;
   profile.active = true;
 }
 
 void Internal::stop_profiling (Profile &profile, double s) {
-  assert (profile.level <= opts.profile);
-  assert (profile.active);
+  if (profile.level > opts.profile || !profile.active) return;
   profile.value += s - profile.started;
   profile.active = false;
 }
 
-double Internal::update_profiles () {
+double Internal::update_profiles (const bool conclude) {
   double now = time ();
 #define PROFILE(NAME, LEVEL) \
   do { \
@@ -38,6 +40,10 @@ double Internal::update_profiles () {
       profile.value += now - profile.started; \
       profile.started = now; \
     } \
+    if (conclude) { \
+      profile.level = 999; \
+      profile.active = false; \
+    } \
   } while (0);
   PROFILES
 #undef PROFILE
@@ -45,7 +51,7 @@ double Internal::update_profiles () {
 }
 
 double Internal::solve_time () {
-  (void) update_profiles ();
+  (void) update_profiles (false);
   return profiles.solve.value;
 }
 
@@ -53,12 +59,19 @@ double Internal::solve_time () {
   MSG ("%s" S "%s", tout.magenta_code (), T, tout.normal_code ())
 
 void Internal::print_profile () {
-  double now = update_profiles ();
+  FILE* f = nullptr;
+  if (internal->profile_report_path) {
+    f = fopen (internal->profile_report_path, "w");
+  }
+
+  double now = update_profiles (true); // disable any further profiling
   const char *time_type = opts.realtime ? "real" : "process";
-  SECTION ("run-time profiling");
-  PRT ("%s time taken by individual solving procedures", time_type);
-  PRT ("(percentage relative to %s time for solving)", time_type);
-  LINE ();
+  if (!f) {
+    SECTION ("run-time profiling");
+    PRT ("%s time taken by individual solving procedures", time_type);
+    PRT ("(percentage relative to %s time for solving)", time_type);
+    LINE ();
+  }
   const size_t size = sizeof profiles / sizeof (Profile);
   struct Profile *profs[size];
   size_t n = 0;
@@ -87,6 +100,11 @@ void Internal::print_profile () {
   double solve = profiles.solve.value;
 
   for (size_t i = 0; i < n; i++) {
+    if (f) {
+      fprintf (f, "%12.2f %7.2f%% %s\n", profs[i]->value,
+         percent (profs[i]->value, solve), profs[i]->name);
+      continue;
+    }
     for (size_t j = i + 1; j < n; j++)
       if (profs[j]->value > profs[i]->value)
         swap (profs[i], profs[j]);
@@ -94,6 +112,12 @@ void Internal::print_profile () {
          percent (profs[i]->value, solve), profs[i]->name);
   }
 
+  if (f) {
+    fprintf (f, "  =================================\n");
+    fprintf (f, "%12.2f %7.2f%% solve\n", solve, percent (solve, now));
+    fclose (f);
+    return;
+  }
   MSG ("  =================================");
   MSG ("%12.2f %7.2f%% solve", solve, percent (solve, now));
 

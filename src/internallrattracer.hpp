@@ -1,15 +1,14 @@
-#ifndef _lrattracer_h_INCLUDED
-#define _lrattracer_h_INCLUDED
 
-#include <mutex>
+#ifndef _internallrattracer_h_INCLUDED
+#define _internallrattracer_h_INCLUDED
+
+#include "onthefly_checking.hpp"
 
 namespace CaDiCaL {
 
-class LratTracer : public FileTracer {
+class InternalLratTracer : public FileTracer {
 
   Internal *internal;
-  File *file;
-  bool binary;
 
 #ifndef QUIET
   int64_t added, deleted;
@@ -17,29 +16,24 @@ class LratTracer : public FileTracer {
   uint64_t latest_id;
   vector<uint64_t> delete_ids;
 
-  std::mutex mtx_write;
-
-  void put_binary_zero ();
-  void put_binary_lit (int external_lit);
-  void put_binary_id (int64_t id);
+  LratCallbackProduceClause cb_produce;
+  LratCallbackImportClause cb_import;
+  LratCallbackDeleteClauses cb_delete;
 
   // support LRAT
-  void lrat_add_clause (uint64_t, bool, const vector<int> &,
+  void lrat_add_clause (const uint64_t, bool, const vector<int> &,
                         const vector<uint64_t> &);
   void lrat_delete_clause (uint64_t);
 
 public:
-  // own and delete 'file'
-  LratTracer (Internal *, File *file, bool binary);
-  ~LratTracer ();
+  InternalLratTracer (Internal *, LratCallbackProduceClause cbProduce, LratCallbackImportClause cbImport, LratCallbackDeleteClauses cbDel);
+  ~InternalLratTracer ();
 
   void connect_internal (Internal *i) override;
   void begin_proof (uint64_t) override;
 
-  void stop_asynchronously () override;
-
-  void add_original_clause (uint64_t, bool, const vector<int> &,
-                            bool = false) override {} // skip
+  void add_original_clause_with_signature (uint64_t id, const vector<int> & clause, const vector<uint8_t>& signature) override;
+  void add_original_clause (uint64_t /*id*/, bool /*redundant*/, const vector<int> & /*clause*/, bool /*restore*/) override {};
 
   void add_derived_clause (uint64_t, bool, const vector<int> &,
                            const vector<uint64_t> &) override;
@@ -47,8 +41,6 @@ public:
   void delete_clause (uint64_t, bool, const vector<int> &) override;
 
   void finalize_clause (uint64_t, const vector<int> &) override {} // skip
-
-  void report_status (int, uint64_t) override {} // skip
 
 #ifndef QUIET
   void print_statistics ();
