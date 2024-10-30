@@ -213,7 +213,7 @@ void Internal::compact () {
       continue;
     }
     assert (eidx > 0);
-    if (opts.lrat) {
+    //if (opts.lrat) {
       assert (external->ext_units.size () >= (size_t) 2 * eidx + 1);
       uint64_t id1 = external->ext_units[2 * eidx];
       uint64_t id2 = external->ext_units[2 * eidx + 1];
@@ -224,7 +224,7 @@ void Internal::compact () {
         external->ext_units[2 * eidx] = new_id1;
         external->ext_units[2 * eidx + 1] = new_id2;
       }
-    }
+    //}
     int dst = mapper.map_lit (src);
     LOG ("compact %" PRId64
          " maps external %d to internal %d from internal %d",
@@ -234,7 +234,7 @@ void Internal::compact () {
 
   // Delete garbage units. Needs to occur before resizing unit_clauses
   //
-  if (opts.lrat) for (auto src : internal->vars) {
+  /*if (opts.lrat)*/ for (auto src : internal->vars) {
     const int dst = mapper.map_idx (src);
     assert (dst <= src);
     const signed char tmp = internal->val (src);
@@ -262,7 +262,7 @@ void Internal::compact () {
     }
     unit_clauses[2 * src] = 0;
     unit_clauses[2 * src + 1] = 0;
-    assert (!opts.lrat || id);
+    assert (/*!opts.lrat ||*/ id);
   }
   unit_clauses.resize (2 * mapper.new_vsize);
   shrink_vector (unit_clauses);
