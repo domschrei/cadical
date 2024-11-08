@@ -153,6 +153,14 @@ void CaDiCaL::Internal::validate_clause_and_add_as_axiom (uint64_t id, std::vect
 // Attempt to import a single clause with external literals.
 void CaDiCaL::Internal::handle_incoming_clause (uint64_t id, int glue, std::vector<int>& cls, const std::vector<uint8_t>& sig) {
 
+  // If no LRAT ID was provided, assign a new one internally.
+  // (We're not doing proper proof logging in that case either way,
+  // but non-zero IDs are still important for some data structures.)
+  if (id == 0) {
+    assert (!opts.lrat);
+    id = next_lrat_id ();
+  }
+
   const size_t size = cls.size ();
   assert (size > 0);
   assert (clause.empty ());
