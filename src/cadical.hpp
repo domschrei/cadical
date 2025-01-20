@@ -710,6 +710,11 @@ public:
   //
   void terminate ();
 
+  // (Addition by D. Schreiber)
+  // Unset the asynchronous termination bit. Can be used to ensure from the
+  // outside that a solve call definitely begins without it being set.
+  void unset_terminate ();
+
   //------------------------------------------------------------------------
 
   // We have the following common reference counting functions, which avoid

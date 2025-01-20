@@ -853,6 +853,10 @@ void Solver::terminate () {
   LOG_API_CALL_END ("terminate");
 }
 
+void Solver::unset_terminate () {
+  external->internal->termination_forced = false;
+}
+
 void Solver::connect_terminator (Terminator *terminator) {
   LOG_API_CALL_BEGIN ("connect_terminator");
   REQUIRE_VALID_STATE ();
